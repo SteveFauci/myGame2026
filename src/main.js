@@ -1,7 +1,5 @@
 import Phaser from 'phaser';
-import TitleScene from './scenes/TitleScene.js';
-import WorldMapScene from './scenes/WorldMapScene.js';
-import LevelScene from './scenes/LevelScene.js';
+import GameScene from './scenes/GameScene.js';
 import './style.css';
 
 const config = {
@@ -20,7 +18,13 @@ const config = {
     antialias: true,
     pixelArt: false,
   },
-  scene: [TitleScene, WorldMapScene, LevelScene],
+  physics: {
+    default: 'arcade',
+    arcade: {
+      debug: false,
+    },
+  },
+  scene: [GameScene],
 };
 
 new Phaser.Game(config);
