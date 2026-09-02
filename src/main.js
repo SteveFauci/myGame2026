@@ -9,10 +9,12 @@ const config = {
   width: 960,
   height: 540,
   scale: {
-    mode: Phaser.Scale.FIT,
+    // Resize the render surface itself instead of scaling a low-resolution canvas.
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 960,
-    height: 540,
+    width: '100%',
+    height: '100%',
+    autoRound: true,
   },
   render: {
     antialias: false,

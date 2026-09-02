@@ -19,5 +19,4 @@ canvas {
   height: 100vh;
   display: block;
   image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
