@@ -65,6 +65,12 @@ export default class GameScene extends Phaser.Scene {
     this.load.image('slimeDown1', '/monsters/greenslime_down_1.png');
     this.load.image('slimeDown2', '/monsters/greenslime_down_2.png');
 
+    this.load.image('heartFull', '/objects/heart_full.png');
+    this.load.image('heartHalf', '/objects/heart_half.png');
+    this.load.image('heartBlank', '/objects/heart_blank.png');
+    this.load.image('manaFull', '/objects/manacrystal_full.png');
+    this.load.image('manaBlank', '/objects/manacrystal_blank.png');
+
     Object.values(ITEM_DEFINITIONS).forEach((item) => {
       this.load.image(item.textureKey, `/objects/${ITEM_ASSET_NAMES[item.textureKey]}.png`);
     });
@@ -113,39 +119,92 @@ export default class GameScene extends Phaser.Scene {
       down: 'S',
       right: 'D',
       attack: 'ENTER',
+      interact: 'F',
       guard: 'SPACE',
       inventory: 'C',
       cancel: 'ESC',
     });
     this.pendingAttack = false;
+    this.pendingInteract = false;
 
     this.input.keyboard.on('keydown-C', this.toggleCharacterPanel, this);
     this.input.keyboard.on('keydown-ESC', this.closeCharacterPanel, this);
     this.input.keyboard.on('keydown-ENTER', () => {
       this.pendingAttack = true;
     });
+    this.input.keyboard.on('keydown-F', () => {
+      this.pendingInteract = true;
+    });
   }
 
   createHud() {
-    this.hud = this.add.text(16, 16, '', {
-      fontFamily: 'Arial',
-      fontSize: '16px',
+    this.heartIcons = Array.from(
+      { length: Math.ceil(this.player.stats.maxLife / 2) },
+      () => this.add.image(0, 0, 'heartBlank')
+        .setOrigin(0.5)
+        .setDisplaySize(this.tileSize, this.tileSize)
+        .setScrollFactor(0)
+        .setDepth(90),
+    );
+    this.manaIcons = Array.from(
+      { length: this.player.stats.maxMana },
+      () => this.add.image(0, 0, 'manaBlank')
+        .setOrigin(0.5)
+        .setDisplaySize(this.tileSize, this.tileSize)
+        .setScrollFactor(0)
+        .setDepth(90),
+    );
+
+    const statusTextStyle = {
+      fontFamily: 'MaruMonica',
+      fontSize: '22px',
       color: '#f8fafc',
-      lineSpacing: 4,
+      stroke: '#0f172a',
+      strokeThickness: 4,
+    };
+    this.lifeHud = this.add.text(0, 0, '', statusTextStyle)
+      .setScrollFactor(0)
+      .setDepth(90);
+    this.manaHud = this.add.text(0, 0, '', statusTextStyle)
+      .setScrollFactor(0)
+      .setDepth(90);
+
+    this.hud = this.add.text(16, 132, '', {
+      fontFamily: 'MaruMonica',
+      fontSize: '21px',
+      color: '#f8fafc',
+      lineSpacing: 5,
       stroke: '#0f172a',
       strokeThickness: 4,
     }).setScrollFactor(0).setDepth(90);
 
-    this.messageHud = this.add.text(16, 116, '', {
-      fontFamily: 'Arial',
-      fontSize: '17px',
+    this.messageHud = this.add.text(16, 214, '', {
+      fontFamily: 'MaruMonica',
+      fontSize: '21px',
       color: '#fde68a',
       lineSpacing: 5,
       stroke: '#0f172a',
       strokeThickness: 4,
     }).setScrollFactor(0).setDepth(90);
 
+    this.layoutHud();
+    this.scale.on('resize', this.layoutHud, this);
     this.updateHud();
+  }
+
+  layoutHud() {
+    if (!this.heartIcons || !this.manaIcons) {
+      return;
+    }
+
+    this.heartIcons.forEach((icon, index) => {
+      icon.setPosition(24 + index * this.tileSize, 24);
+    });
+    this.manaIcons.forEach((icon, index) => {
+      icon.setPosition(43 + index * 35, 96);
+    });
+    this.lifeHud.setPosition(184, 8);
+    this.manaHud.setPosition(184, 80);
   }
 
   createCharacterPanel() {
@@ -157,27 +216,27 @@ export default class GameScene extends Phaser.Scene {
     this.panelBackdrop = this.add.rectangle(0, 0, 1, 1, 0x020617, 0.82).setOrigin(0);
     this.panelFrame = this.add.rectangle(0, 0, 1, 1, 0x172033, 1).setOrigin(0);
     this.panelTitle = this.add.text(0, 0, 'Character & Inventory', {
-      fontFamily: 'Arial',
-      fontSize: '26px',
+      fontFamily: 'MaruMonica',
+      fontSize: '35px',
       color: '#f8fafc',
       fontStyle: 'bold',
     });
     this.panelStats = this.add.text(0, 0, '', {
-      fontFamily: 'Arial',
-      fontSize: '17px',
+      fontFamily: 'MaruMonica',
+      fontSize: '25px',
       color: '#cbd5e1',
       lineSpacing: 6,
     });
     this.panelDescription = this.add.text(0, 0, '', {
-      fontFamily: 'Arial',
-      fontSize: '17px',
+      fontFamily: 'MaruMonica',
+      fontSize: '24px',
       color: '#f8fafc',
       wordWrap: { width: 300 },
       lineSpacing: 6,
     });
-    this.panelHint = this.add.text(0, 0, 'Arrows: select    Enter: equip/use    C / Esc: close', {
-      fontFamily: 'Arial',
-      fontSize: '15px',
+    this.panelHint = this.add.text(0, 0, 'WASD / Arrows: select    F: equip/use    C / Esc: close', {
+      fontFamily: 'MaruMonica',
+      fontSize: '21px',
       color: '#94a3b8',
     });
 
@@ -191,8 +250,8 @@ export default class GameScene extends Phaser.Scene {
         .setStrokeStyle(2, 0x475569);
       const icon = this.add.image(0, 0, 'item-normal-sword').setScale(3).setVisible(false);
       const amount = this.add.text(0, 0, '', {
-        fontFamily: 'Arial',
-        fontSize: '15px',
+        fontFamily: 'MaruMonica',
+        fontSize: '22px',
         color: '#ffffff',
         stroke: '#020617',
         strokeThickness: 3,
@@ -232,7 +291,7 @@ export default class GameScene extends Phaser.Scene {
     this.panelFrame.setPosition(panelX, panelY).setSize(panelWidth, panelHeight);
     this.panelTitle.setPosition(panelX + 32, panelY + 24);
     this.panelStats.setPosition(panelX + 410, panelY + 112);
-    this.panelDescription.setPosition(panelX + 410, panelY + 430);
+    this.panelDescription.setPosition(panelX + 410, panelY + 490);
     this.panelHint.setPosition(panelX + 32, panelY + panelHeight - 32);
 
     this.panelSlots.forEach((slot, index) => {
@@ -263,22 +322,34 @@ export default class GameScene extends Phaser.Scene {
     const cursor = this.player.inventoryCursor ?? 0;
     let nextCursor = cursor;
 
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
+    if (
+      Phaser.Input.Keyboard.JustDown(this.cursors.left)
+      || Phaser.Input.Keyboard.JustDown(this.keys.left)
+    ) {
       nextCursor = Math.max(0, cursor - 1);
     }
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
+    if (
+      Phaser.Input.Keyboard.JustDown(this.cursors.right)
+      || Phaser.Input.Keyboard.JustDown(this.keys.right)
+    ) {
       nextCursor = Math.min(19, cursor + 1);
     }
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) {
+    if (
+      Phaser.Input.Keyboard.JustDown(this.cursors.up)
+      || Phaser.Input.Keyboard.JustDown(this.keys.up)
+    ) {
       nextCursor = Math.max(0, cursor - 5);
     }
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) {
+    if (
+      Phaser.Input.Keyboard.JustDown(this.cursors.down)
+      || Phaser.Input.Keyboard.JustDown(this.keys.down)
+    ) {
       nextCursor = Math.min(19, cursor + 5);
     }
 
     this.player.inventoryCursor = nextCursor;
 
-    if (this.consumeAttackInput()) {
+    if (this.consumeInteractInput()) {
       const message = this.player.selectInventoryItem(nextCursor);
       this.addCombatMessage(message);
     }
@@ -351,11 +422,27 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    const life = Math.max(0, this.player.stats.life);
+    const mana = Math.max(0, this.player.stats.mana);
+    this.heartIcons.forEach((icon, index) => {
+      const remainingLife = life - index * 2;
+      const textureKey = remainingLife >= 2
+        ? 'heartFull'
+        : remainingLife === 1
+          ? 'heartHalf'
+          : 'heartBlank';
+      icon.setTexture(textureKey);
+    });
+    this.manaIcons.forEach((icon, index) => {
+      icon.setTexture(index < mana ? 'manaFull' : 'manaBlank');
+    });
+    this.lifeHud.setText(`HP ${life}/${this.player.stats.maxLife}`);
+    this.manaHud.setText(`MP ${mana}/${this.player.stats.maxMana}`);
+
     this.hud.setText([
-      `HP ${this.player.stats.life}/${this.player.stats.maxLife}`,
       `ATK ${this.player.attackPower}   DEF ${this.player.defense}`,
       `Weapon: ${this.player.getCurrentWeapon().name}`,
-      '[Enter] Attack   [Space] Guard   [C] Inventory',
+      '[Enter] Attack   [F] Interact   [Space] Guard   [C] Inventory',
     ].join('\n'));
 
     this.combatMessages = this.combatMessages.filter(
@@ -389,6 +476,13 @@ export default class GameScene extends Phaser.Scene {
     const attackJustDown = this.pendingAttack || keyboardAttack;
     this.pendingAttack = false;
     return attackJustDown;
+  }
+
+  consumeInteractInput() {
+    const keyboardInteract = Phaser.Input.Keyboard.JustDown(this.keys.interact);
+    const interactJustDown = this.pendingInteract || keyboardInteract;
+    this.pendingInteract = false;
+    return interactJustDown;
   }
 
   toggleCharacterPanel() {
