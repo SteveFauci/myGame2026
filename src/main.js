@@ -15,8 +15,9 @@ const config = {
     height: 540,
   },
   render: {
-    antialias: true,
-    pixelArt: false,
+    antialias: false,
+    pixelArt: true,
+    roundPixels: true,
   },
   physics: {
     default: 'arcade',
