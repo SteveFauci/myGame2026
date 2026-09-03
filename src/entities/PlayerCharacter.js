@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
+import { COMBAT_RULES } from '../data/combat.js';
 import { ITEM_TYPES, getItemDefinition } from '../data/items.js';
+import { PLAYER_PROGRESSION } from '../data/progression.js';
+import { loadPlayerState } from '../data/playerState.js';
 import Inventory from '../systems/Inventory.js';
 
 const DIRECTIONS = ['up', 'down', 'left', 'right'];
@@ -11,31 +14,25 @@ const OPPOSITE_DIRECTION = Object.freeze({
   right: 'left',
 });
 
+const MANA_REGEN_INTERVAL_MS = 2500;
+
 export default class PlayerCharacter {
-  constructor(scene, x, y) {
+  constructor(scene, x, y, playerState = loadPlayerState()) {
     this.scene = scene;
     this.tileSize = scene.tileSize;
     this.speed = 220;
     this.facing = 'down';
+    const state = playerState ?? loadPlayerState();
 
-    this.stats = {
-      level: 1,
-      maxLife: 6,
-      life: 6,
-      maxMana: 4,
-      mana: 4,
-      strength: 5,
-      dexterity: 1,
-      coin: 500,
-    };
+    this.stats = { ...state.stats };
 
-    this.inventory = new Inventory(20);
-    this.currentWeaponId = 'normalSword';
-    this.currentShieldId = 'woodShield';
-    this.inventory.add('normalSword');
-    this.inventory.add('woodShield');
-    this.inventory.add('key');
-    this.inventory.add('redPotion', 2);
+    this.inventory = new Inventory(20).load(state.inventory);
+    this.currentWeaponId = state.currentWeaponId;
+    this.currentWeaponSlotId = state.currentWeaponSlotId ?? null;
+    this.currentShieldId = state.currentShieldId;
+    this.currentShieldSlotId = state.currentShieldSlotId ?? null;
+    this.currentLightId = state.currentLightId ?? null;
+    this.currentLightSlotId = state.currentLightSlotId ?? null;
 
     this.sprite = scene.physics.add.sprite(x, y, 'playerDown1');
     this.sprite.setOrigin(0.5);
@@ -53,8 +50,12 @@ export default class PlayerCharacter {
     this.attackState = null;
     this.guarding = false;
     this.guardElapsed = 0;
+    this.guardPressedAt = -Infinity;
     this.invulnerableUntil = 0;
     this.knockbackState = null;
+    this.dead = false;
+    this.rangedAttackCooldownUntil = 0;
+    this.manaRegenElapsed = 0;
 
     this.ensureAnimations();
   }
@@ -85,7 +86,49 @@ export default class PlayerCharacter {
     return getItemDefinition(this.currentShieldId);
   }
 
+  getCurrentLight() {
+    return getItemDefinition(this.currentLightId);
+  }
+
+  getGridPosition() {
+    return {
+      col: Math.floor(this.x / this.tileSize),
+      row: Math.floor(this.y / this.tileSize),
+    };
+  }
+
+  isSlotEquipped(slotId) {
+    return Boolean(
+      slotId
+      && (
+        slotId === this.currentWeaponSlotId
+        || slotId === this.currentShieldSlotId
+        || slotId === this.currentLightSlotId
+      ),
+    );
+  }
+
+  toState() {
+    return {
+      stats: { ...this.stats },
+      inventory: this.inventory.toJSON(),
+      currentWeaponId: this.currentWeaponId,
+      currentWeaponSlotId: this.currentWeaponSlotId,
+      currentShieldId: this.currentShieldId,
+      currentShieldSlotId: this.currentShieldSlotId,
+      currentLightId: this.currentLightId,
+      currentLightSlotId: this.currentLightSlotId,
+    };
+  }
+
   update(input, enemies, delta) {
+    if (this.dead) {
+      this.sprite.setVelocity(0, 0);
+      return;
+    }
+
+    this.updateManaRegen(delta);
+
     if (this.knockbackState) {
       this.updateKnockback(delta);
       return;
@@ -101,16 +144,21 @@ export default class PlayerCharacter {
       return;
     }
 
+    if (input.rangedAttackJustDown) {
+      this.startRangedAttack();
+      return;
+    }
+
     if (input.guardDown) {
-      this.updateGuard(delta);
+      this.updateGuard(delta, input.guardJustDown);
       return;
     }
 
     this.stopGuarding();
-    this.updateMovement(input);
+    this.updateMovement(input, delta);
   }
 
-  updateMovement(input) {
+  updateMovement(input, delta) {
     let vx = 0;
     let vy = 0;
 
@@ -139,14 +187,20 @@ export default class PlayerCharacter {
     }
 
     const length = Math.hypot(vx, vy);
-    this.sprite.setVelocity((vx / length) * this.speed, (vy / length) * this.speed);
+    const distance = this.speed * (delta / 1000);
+    this.scene.movePlayer(
+      this,
+      (vx / length) * distance,
+      (vy / length) * distance,
+    );
     this.sprite.play(`${this.facing}-walk`, true);
   }
 
-  updateGuard(delta) {
-    if (!this.guarding) {
+  updateGuard(delta, justDown = false) {
+    if (!this.guarding || justDown) {
       this.guarding = true;
       this.guardElapsed = 0;
+      this.guardPressedAt = this.scene.time.now;
     }
 
     this.guardElapsed += delta;
@@ -162,6 +216,7 @@ export default class PlayerCharacter {
 
     this.guarding = false;
     this.guardElapsed = 0;
+    this.guardPressedAt = -Infinity;
     this.sprite.setTexture(this.getStandingTexture());
   }
 
@@ -170,6 +225,7 @@ export default class PlayerCharacter {
       return;
     }
 
+    this.scene.audio?.playSfx('sfx-swing-weapon', { volume: 0.55 });
     this.attackState = {
       elapsed: 0,
       hitApplied: false,
@@ -196,9 +252,15 @@ export default class PlayerCharacter {
 
       enemies.forEach((enemy) => {
         if (!enemy.defeated && Phaser.Geom.Intersects.RectangleToRectangle(attackBounds, enemy.getHitbox())) {
-          enemy.takeDamage(this.attackPower, this.facing, this.getCurrentWeapon().knockBackPower);
+          enemy.takeDamage(
+            this.attackPower,
+            this.facing,
+            this.getCurrentWeapon().knockBackPower,
+            'melee',
+          );
         }
       });
+      this.scene.damageInteractiveEntities(attackBounds, this.currentWeaponId);
     }
 
     if (this.attackState.elapsed >= 240) {
@@ -211,6 +273,79 @@ export default class PlayerCharacter {
     this.attackSprite.setVisible(false);
     this.sprite.setVisible(true);
     this.sprite.setTexture(this.getStandingTexture());
+  }
+
+  startRangedAttack() {
+    if (this.scene.time.now < this.rangedAttackCooldownUntil) {
+      return;
+    }
+
+    const fireballCost = 1;
+    if (this.stats.mana < fireballCost) {
+      this.scene.addCombatMessage('Not enough mana.');
+      return;
+    }
+
+    const projectile = this.scene.spawnProjectile({
+      owner: this,
+      x: this.x,
+      y: this.y,
+      direction: this.facing,
+      damage: Math.max(2, this.stats.level * 2),
+      knockBackPower: 5,
+      speed: 420,
+      lightRadius: 125,
+      maxLife: 1200,
+      textureKeys: {
+        up: ['fireballUp1', 'fireballUp2'],
+        down: ['fireballDown1', 'fireballDown2'],
+        left: ['fireballLeft1', 'fireballLeft2'],
+        right: ['fireballRight1', 'fireballRight2'],
+      },
+    });
+
+    if (!projectile) {
+      return;
+    }
+
+    this.stats.mana = Math.max(0, this.stats.mana - fireballCost);
+    this.manaRegenElapsed = 0;
+    this.rangedAttackCooldownUntil = this.scene.time.now + 450;
+    this.scene.audio?.playSfx('sfx-burning', { volume: 0.45 });
+    this.scene.addCombatMessage('Fireball!');
+  }
+
+  gainExperience(amount) {
+    const gainedExperience = Math.max(0, Math.floor(Number(amount) || 0));
+    if (gainedExperience <= 0) {
+      return 0;
+    }
+
+    this.stats.exp += gainedExperience;
+    this.scene.addCombatMessage(`Exp + ${gainedExperience}`);
+
+    let levelsGained = 0;
+    while (this.stats.exp >= this.stats.nextLevelExp) {
+      this.stats.level += 1;
+      this.stats.nextLevelExp *= PLAYER_PROGRESSION.nextLevelMultiplier;
+      this.stats.maxLife += PLAYER_PROGRESSION.maxLifePerLevel;
+      this.stats.maxMana += PLAYER_PROGRESSION.maxManaPerLevel;
+      this.stats.strength += PLAYER_PROGRESSION.strengthPerLevel;
+      this.stats.dexterity += PLAYER_PROGRESSION.dexterityPerLevel;
+      this.stats.life = this.stats.maxLife;
+      this.stats.mana = this.stats.maxMana;
+      levelsGained += 1;
+    }
+
+    if (levelsGained > 0) {
+      this.scene.audio?.playSfx('sfx-level-up', { volume: 0.65 });
+      this.scene.addCombatMessage(
+        `Level ${this.stats.level}! Max HP +${PLAYER_PROGRESSION.maxLifePerLevel}, `
+        + `Max MP +${PLAYER_PROGRESSION.maxManaPerLevel}.`,
+      );
+    }
+
+    return levelsGained;
   }
 
   getAttackBounds() {
@@ -260,26 +395,42 @@ export default class PlayerCharacter {
     let damage = Math.max(1, rawAttack - this.defense);
     const canParryFrom = OPPOSITE_DIRECTION[attackerDirection];
     let result = 'hit';
+    const guardAge = this.scene.time.now - this.guardPressedAt;
+    const perfectGuard = (
+      this.guarding
+      && this.facing === canParryFrom
+      && guardAge >= 0
+      && guardAge <= COMBAT_RULES.perfectGuardWindowMs
+    );
 
-    if (this.guarding && this.facing === canParryFrom) {
-      if (this.guardElapsed < 170) {
-        damage = 0;
-        result = 'parry';
-        attacker?.stagger(900);
-      } else {
-        damage = Math.floor(damage / 3);
-        result = 'block';
-      }
+    if (perfectGuard) {
+      damage = 0;
+      result = 'parry';
+      attacker?.stagger(COMBAT_RULES.staggerDurationMs);
+    } else if (this.guarding && this.facing === canParryFrom) {
+      damage = Math.floor(damage / COMBAT_RULES.blockDamageDivisor);
+      result = 'block';
     }
 
     if (damage > 0) {
       this.stats.life = Math.max(0, this.stats.life - damage);
+      this.scene.audio?.playSfx('sfx-receive-damage', { volume: 0.55 });
       this.startKnockback(attackerDirection, attacker?.knockBackPower ?? 0);
+
+      if (this.stats.life <= 0) {
+        this.dead = true;
+        this.scene.enterGameOver();
+      }
     }
 
-    this.invulnerableUntil = this.scene.time.now + 650;
+    this.invulnerableUntil = this.scene.time.now + COMBAT_RULES.playerInvulnerabilityMs;
     this.sprite.setTint(result === 'hit' ? 0xff7777 : 0x9ee7ff);
-    this.scene.time.delayedCall(180, () => this.sprite.clearTint());
+    this.scene.time.delayedCall(180, () => {
+      if (!this.dead) {
+        this.sprite.clearTint();
+      }
+    });
+    this.scene.showCombatFeedback?.(result);
 
     return { damage, result };
   }
@@ -308,8 +459,13 @@ export default class PlayerCharacter {
       velocity.x = knockbackSpeed;
     }
 
-    this.sprite.setVelocity(velocity.x, velocity.y);
-    this.knockbackState.remaining -= (delta / 1000) * knockbackSpeed;
+    const distance = (delta / 1000) * knockbackSpeed;
+    this.scene.movePlayer(
+      this,
+      velocity.x === 0 ? 0 : Math.sign(velocity.x) * distance,
+      velocity.y === 0 ? 0 : Math.sign(velocity.y) * distance,
+    );
+    this.knockbackState.remaining -= distance;
 
     if (this.knockbackState.remaining <= 0) {
       this.knockbackState = null;
@@ -326,19 +482,41 @@ export default class PlayerCharacter {
     }
 
     const item = getItemDefinition(slot.itemId);
+    const slotId = slot.slotId ?? null;
 
     if (item.type === ITEM_TYPES.weapon) {
       this.currentWeaponId = item.id;
+      this.currentWeaponSlotId = slotId;
       return `Equipped ${item.name}`;
     }
 
     if (item.type === ITEM_TYPES.shield) {
       this.currentShieldId = item.id;
+      this.currentShieldSlotId = slotId;
+      return `Equipped ${item.name}`;
+    }
+
+    if (item.type === ITEM_TYPES.light) {
+      if (this.currentLightSlotId === slotId) {
+        this.currentLightId = null;
+        this.currentLightSlotId = null;
+        return `${item.name} off`;
+      }
+
+      this.currentLightId = item.id;
+      this.currentLightSlotId = slotId;
       return `Equipped ${item.name}`;
     }
 
     if (item.type === ITEM_TYPES.consumable) {
-      this.stats.life = Math.min(this.stats.maxLife, this.stats.life + item.value);
+      if (item.id === 'tent') {
+        this.stats.life = this.stats.maxLife;
+        this.stats.mana = this.stats.maxMana;
+        this.scene.startSleepSequence?.();
+        return 'You sleep until morning';
+      } else {
+        this.stats.life = Math.min(this.stats.maxLife, this.stats.life + item.value);
+      }
       this.inventory.removeOne(index);
       return `Used ${item.name}`;
     }
@@ -348,6 +526,22 @@ export default class PlayerCharacter {
 
   getStandingTexture() {
     return `player${this.capitalize(this.facing)}1`;
+  }
+
+  updateManaRegen(delta) {
+    if (this.stats.mana >= this.stats.maxMana || this.stats.maxMana <= 0) {
+      this.manaRegenElapsed = 0;
+      return;
+    }
+
+    this.manaRegenElapsed += Math.max(0, delta);
+    while (
+      this.manaRegenElapsed >= MANA_REGEN_INTERVAL_MS
+      && this.stats.mana < this.stats.maxMana
+    ) {
+      this.stats.mana += 1;
+      this.manaRegenElapsed -= MANA_REGEN_INTERVAL_MS;
+    }
   }
 
   ensureAnimations() {
@@ -370,7 +564,12 @@ export default class PlayerCharacter {
   }
 
   renderAttackFrame(frame) {
-    const textureKey = `playerAttack${this.capitalize(this.facing)}${frame}`;
+    const attackPrefix = this.currentWeaponId === 'axe'
+      ? 'playerAxe'
+      : this.currentWeaponId === 'pickaxe'
+        ? 'playerPick'
+        : 'playerAttack';
+    const textureKey = `${attackPrefix}${this.capitalize(this.facing)}${frame}`;
     const offsets = {
       up: { x: 0, y: -this.tileSize / 2 },
       down: { x: 0, y: this.tileSize / 2 },

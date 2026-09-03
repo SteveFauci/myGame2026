@@ -3,6 +3,7 @@ export const ITEM_TYPES = Object.freeze({
   shield: 'shield',
   consumable: 'consumable',
   key: 'key',
+  light: 'light',
 });
 
 export const ITEM_DEFINITIONS = Object.freeze({
@@ -17,6 +18,30 @@ export const ITEM_DEFINITIONS = Object.freeze({
     knockBackPower: 2,
     description: 'An old sword.',
     price: 75,
+  },
+  axe: {
+    id: 'axe',
+    name: "Woodcutter's Axe",
+    type: ITEM_TYPES.weapon,
+    textureKey: 'item-axe',
+    attackValue: 2,
+    attackWidth: 30,
+    attackHeight: 30,
+    knockBackPower: 10,
+    description: 'A bit rusty, but still useful.',
+    price: 75,
+  },
+  pickaxe: {
+    id: 'pickaxe',
+    name: 'Pickaxe',
+    type: ITEM_TYPES.weapon,
+    textureKey: 'item-pickaxe',
+    attackValue: 1,
+    attackWidth: 30,
+    attackHeight: 30,
+    knockBackPower: 4,
+    description: 'Breaks stone walls.',
+    price: 120,
   },
   woodShield: {
     id: 'woodShield',
@@ -46,6 +71,24 @@ export const ITEM_DEFINITIONS = Object.freeze({
     description: 'Restores 5 life.',
     price: 20,
   },
+  tent: {
+    id: 'tent',
+    name: 'Tent',
+    type: ITEM_TYPES.consumable,
+    textureKey: 'item-tent',
+    stackable: true,
+    description: 'Restores life and mana.',
+    price: 300,
+  },
+  lantern: {
+    id: 'lantern',
+    name: 'Lantern',
+    type: ITEM_TYPES.light,
+    textureKey: 'item-lantern',
+    lightRadius: 350,
+    description: 'Illuminates your surroundings.',
+    price: 200,
+  },
   key: {
     id: 'key',
     name: 'Key',
@@ -56,6 +99,27 @@ export const ITEM_DEFINITIONS = Object.freeze({
     price: 20,
   },
 });
+
+export const ITEM_ASSET_NAMES = Object.freeze({
+  'item-normal-sword': 'sword_normal',
+  'item-wood-shield': 'shield_wood',
+  'item-blue-shield': 'shield_blue',
+  'item-red-potion': 'potion_red',
+  'item-key': 'key',
+  'item-axe': 'axe',
+  'item-pickaxe': 'pickaxe',
+  'item-tent': 'tent',
+  'item-lantern': 'lantern',
+});
+
+export function getItemAssetPath(itemOrTextureKey) {
+  const textureKey = typeof itemOrTextureKey === 'string'
+    ? itemOrTextureKey
+    : itemOrTextureKey?.textureKey;
+  const assetName = ITEM_ASSET_NAMES[textureKey];
+
+  return assetName ? `/objects/${assetName}.png` : null;
+}
 
 export function getItemDefinition(itemId) {
   return ITEM_DEFINITIONS[itemId] ?? null;

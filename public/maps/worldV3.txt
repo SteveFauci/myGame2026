@@ -51,7 +51,7 @@
 #Entity
 OBJ,OBJ_Coin_Bronze,25,19
 OBJ,OBJ_Key,21,19
-OBJ,OBJ_Tent,19,20
+OBJ,OBJ_FieldShopHut,19,20,fieldShop
 OBJ,OBJ_Key,26,21
 OBJ,OBJ_Axe,33,21
 OBJ,OBJ_Shield_Blue,35,21
