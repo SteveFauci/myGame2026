@@ -50,7 +50,7 @@ export const MAP_TRIGGER_DEFINITIONS = Object.freeze({
       id: 'skeleton-lord-cutscene',
       kind: 'boss-cutscene',
       col: 25,
-      row: 27,
+      row: 26,
       allowedChapterIds: Object.freeze(['bossGate']),
       activation: 'touch',
     }),

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import CreditsScene from './scenes/CreditsScene.js';
 import GameScene from './scenes/GameScene.js';
 import ShopScene from './scenes/ShopScene.js';
+import TitleScene from './scenes/TitleScene.js';
 import WorldMapScene from './scenes/WorldMapScene.js';
 import './style.css';
 
@@ -30,7 +31,7 @@ const config = {
       debug: false,
     },
   },
-  scene: [WorldMapScene, ShopScene, GameScene, CreditsScene],
+  scene: [TitleScene, WorldMapScene, ShopScene, GameScene, CreditsScene],
 };
 
 const game = new Phaser.Game(config);

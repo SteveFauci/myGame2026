@@ -65,6 +65,10 @@ export default class ShopInventory {
       return { ok: false, message: 'You cannot sell an equipped item!' };
     }
 
+    if (item.sellable === false) {
+      return { ok: false, message: 'This treasure cannot be sold.' };
+    }
+
     const price = this.getSellPrice(index);
     if (!this.inventory.removeOne(index)) {
       return { ok: false, message: 'Nothing selected.' };
@@ -81,7 +85,7 @@ export default class ShopInventory {
 
   getSellPrice(index) {
     const item = getItemDefinition(this.inventory.get(index)?.itemId);
-    return item ? Math.floor(item.price / 2) : null;
+    return item && item.sellable !== false ? Math.floor(item.price / 2) : null;
   }
 
   isEquippedSlot(slotId) {

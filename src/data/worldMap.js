@@ -68,6 +68,16 @@ const WORLD_NODE_DEFINITIONS = Object.freeze([
     chapterName: 'Boss Gate',
     spawn: Object.freeze({ col: 26, row: 41 }),
   }),
+  Object.freeze({
+    id: 'toBeContinued',
+    label: 'To Be Continued',
+    hiddenLabel: 'To Be Continued',
+    x: 1440,
+    y: 696,
+    icon: 'world-door-iron',
+    unlockedByDefault: false,
+    discoveredByDefault: true,
+  }),
 ]);
 
 const WORLD_PATH_DEFINITIONS = Object.freeze([
@@ -76,6 +86,7 @@ const WORLD_PATH_DEFINITIONS = Object.freeze([
   Object.freeze(['fieldShop', 'slimeGrove']),
   Object.freeze(['slimeGrove', 'dungeon']),
   Object.freeze(['dungeon', 'bossGate']),
+  Object.freeze(['bossGate', 'toBeContinued']),
 ]);
 
 const WORLD_MARKER_DEFINITIONS = Object.freeze([]);

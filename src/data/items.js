@@ -4,6 +4,7 @@ export const ITEM_TYPES = Object.freeze({
   consumable: 'consumable',
   key: 'key',
   light: 'light',
+  treasure: 'treasure',
 });
 
 export const ITEM_DEFINITIONS = Object.freeze({
@@ -98,6 +99,15 @@ export const ITEM_DEFINITIONS = Object.freeze({
     description: 'It opens a door.',
     price: 20,
   },
+  blueHeart: {
+    id: 'blueHeart',
+    name: 'Blue Heart',
+    type: ITEM_TYPES.treasure,
+    textureKey: 'item-blue-heart',
+    description: 'The legendary treasure of the Skeleton Lord.',
+    price: 0,
+    sellable: false,
+  },
 });
 
 export const ITEM_ASSET_NAMES = Object.freeze({
@@ -110,6 +120,7 @@ export const ITEM_ASSET_NAMES = Object.freeze({
   'item-pickaxe': 'pickaxe',
   'item-tent': 'tent',
   'item-lantern': 'lantern',
+  'item-blue-heart': 'blueheart',
 });
 
 export function getItemAssetPath(itemOrTextureKey) {

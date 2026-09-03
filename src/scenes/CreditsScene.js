@@ -45,13 +45,15 @@ const CREDIT_LINES = Object.freeze([
 export default class CreditsScene extends Phaser.Scene {
   constructor() {
     super('CreditsScene');
-    this.returnNodeId = 'bossGate';
+    this.returnSceneKey = 'TitleScene';
+    this.returnSceneData = {};
     this.phase = 'story';
     this.elapsed = 0;
   }
 
   init(data = {}) {
-    this.returnNodeId = data.returnNodeId ?? 'bossGate';
+    this.returnSceneKey = data.returnSceneKey ?? 'TitleScene';
+    this.returnSceneData = data.returnSceneData ?? {};
     this.phase = 'story';
     this.elapsed = 0;
   }
@@ -101,7 +103,7 @@ export default class CreditsScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5, 0);
 
-    this.exitHint = this.add.text(0, 0, 'F / Enter: return to World Map', {
+    this.exitHint = this.add.text(0, 0, 'F / Enter: return to Title Screen', {
       fontFamily: 'MaruMonica',
       fontSize: '24px',
       color: '#94a3b8',
@@ -137,7 +139,7 @@ export default class CreditsScene extends Phaser.Scene {
       || Phaser.Input.Keyboard.JustDown(this.keys.interact)
       || Phaser.Input.Keyboard.JustDown(this.keys.cancel)
     ) {
-      this.returnToWorldMap();
+      this.returnToReturnScene();
       return;
     }
 
@@ -183,10 +185,16 @@ export default class CreditsScene extends Phaser.Scene {
     }
   }
 
-  returnToWorldMap() {
-    this.scene.start('WorldMapScene', {
-      returnNodeId: this.returnNodeId,
-      worldMessage: 'The Blue Heart has been claimed.',
-    });
+  returnToReturnScene() {
+    const returnScene = this.returnSceneKey ? this.scene.get(this.returnSceneKey) : null;
+
+    if (returnScene) {
+      returnScene.onCreditsReturn?.(this.returnSceneData);
+      this.scene.resume(this.returnSceneKey);
+      this.scene.stop();
+      return;
+    }
+
+    this.scene.start(this.returnSceneKey ?? 'TitleScene', this.returnSceneData);
   }
 }

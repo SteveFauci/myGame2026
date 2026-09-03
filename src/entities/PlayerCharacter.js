@@ -121,6 +121,21 @@ export default class PlayerCharacter {
     };
   }
 
+  applyState(playerState = loadPlayerState()) {
+    const state = playerState ?? loadPlayerState();
+
+    this.stats = { ...state.stats };
+    this.inventory.load(state.inventory);
+    this.currentWeaponId = state.currentWeaponId;
+    this.currentWeaponSlotId = state.currentWeaponSlotId ?? null;
+    this.currentShieldId = state.currentShieldId;
+    this.currentShieldSlotId = state.currentShieldSlotId ?? null;
+    this.currentLightId = state.currentLightId ?? null;
+    this.currentLightSlotId = state.currentLightSlotId ?? null;
+
+    return this;
+  }
+
   update(input, enemies, delta) {
     if (this.dead) {
       this.sprite.setVelocity(0, 0);
@@ -392,6 +407,7 @@ export default class PlayerCharacter {
       return { damage: 0, result: 'invulnerable' };
     }
 
+    const invincible = Boolean(this.scene?.developerMode?.invincible);
     let damage = Math.max(1, rawAttack - this.defense);
     const canParryFrom = OPPOSITE_DIRECTION[attackerDirection];
     let result = 'hit';
@@ -413,11 +429,13 @@ export default class PlayerCharacter {
     }
 
     if (damage > 0) {
-      this.stats.life = Math.max(0, this.stats.life - damage);
+      this.stats.life = invincible
+        ? Math.max(1, this.stats.life - damage)
+        : Math.max(0, this.stats.life - damage);
       this.scene.audio?.playSfx('sfx-receive-damage', { volume: 0.55 });
       this.startKnockback(attackerDirection, attacker?.knockBackPower ?? 0);
 
-      if (this.stats.life <= 0) {
+      if (this.stats.life <= 0 && !invincible) {
         this.dead = true;
         this.scene.enterGameOver();
       }

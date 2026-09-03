@@ -87,6 +87,10 @@ export function resetPlayerState() {
   return cloneState(cachedState);
 }
 
+export function clearPlayerStateCache() {
+  cachedState = null;
+}
+
 function normalizePlayerState(playerState) {
   const normalized = {
     stats: normalizeStats(playerState?.stats),

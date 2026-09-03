@@ -13,6 +13,7 @@ export default class ShopScene extends Phaser.Scene {
     super('ShopScene');
     this.shopId = 'fieldShop';
     this.returnNodeId = 'fieldShop';
+    this.returnSceneKey = 'WorldMapScene';
     this.mode = 'select';
     this.menuCursor = 0;
     this.buyCursor = 0;
@@ -23,6 +24,7 @@ export default class ShopScene extends Phaser.Scene {
   init(data = {}) {
     this.shopId = data.shopId ?? 'fieldShop';
     this.returnNodeId = data.returnNodeId ?? this.shopId;
+    this.returnSceneKey = data.returnSceneKey ?? 'WorldMapScene';
     this.mode = 'select';
     this.menuCursor = 0;
     this.buyCursor = 0;
@@ -435,19 +437,31 @@ export default class ShopScene extends Phaser.Scene {
       : this.trade.getSellPrice(this.sellCursor);
     const actionLabel = this.mode === 'buy' ? 'Price' : 'Sell Price';
     const equippedText = this.mode === 'sell' && this.trade.isEquippedSlot(slot?.slotId) ? '\nEquipped' : '';
+    const priceText = this.mode === 'sell' && price === null
+      ? 'Cannot be sold'
+      : `${actionLabel}: ${price}`;
 
     this.descriptionText.setText([
       item.name,
       '',
       item.description,
       '',
-      `${actionLabel}: ${price}`,
+      priceText,
       equippedText.trim(),
     ].filter(Boolean).join('\n'));
   }
 
   leaveShop() {
-    savePlayerState(this.trade.getPlayerState());
+    const savedState = savePlayerState(this.trade.getPlayerState());
+    const returnScene = this.returnSceneKey ? this.scene.get(this.returnSceneKey) : null;
+
+    if (returnScene) {
+      returnScene.onShopReturn?.(savedState, this.shopDefinition.farewell);
+      this.scene.resume(this.returnSceneKey);
+      this.scene.stop();
+      return;
+    }
+
     this.scene.start('WorldMapScene', {
       returnNodeId: this.returnNodeId,
       worldMessage: this.shopDefinition.farewell,

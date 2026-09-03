@@ -140,6 +140,26 @@ export function saveProgress(progress) {
   return normalized;
 }
 
+export function resetProgress() {
+  const fallback = getDefaultProgress();
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const storage = window.localStorage;
+      if (storage) {
+        storage.removeItem(STORAGE_KEY);
+        LEGACY_STORAGE_KEYS.forEach((legacyStorage) => {
+          storage.removeItem(legacyStorage.key);
+        });
+      }
+    } catch {
+      // Resetting progress should fail gracefully if storage is blocked.
+    }
+  }
+
+  return fallback;
+}
+
 export function completeChapterProgress(chapterId, unlockedNodeIds = [], discoveredNodeIds = unlockedNodeIds) {
   const progress = loadProgress();
   const newlyUnlockedNodeIds = unlockedNodeIds.filter(

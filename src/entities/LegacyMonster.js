@@ -267,30 +267,29 @@ export default class LegacyMonster {
 
   playDeathAnimation() {
     const sprite = this.sprite;
+    sprite.setTint(0xffffff);
     this.scene.add.timeline([
-      { at: 0, tween: { targets: sprite, alpha: 0.25, duration: 60 } },
-      { at: 60, tween: { targets: sprite, alpha: 1, duration: 60 } },
-      { at: 120, tween: { targets: sprite, alpha: 0.25, duration: 60 } },
+      { at: 0, tween: { targets: sprite, alpha: 0.2, duration: 45 } },
+      { at: 45, tween: { targets: sprite, alpha: 1, duration: 45 } },
+      { at: 90, tween: { targets: sprite, alpha: 0.2, duration: 45 } },
       {
-        at: 180,
+        at: 135,
         tween: {
           targets: sprite,
           alpha: 0,
-          scaleX: this.scale + 0.8,
-          scaleY: this.scale + 0.8,
-          angle: 8,
-          duration: 220,
-          ease: 'Cubic.easeIn',
+          duration: 90,
+          ease: 'Linear',
         },
       },
       {
-        at: 410,
+        at: 230,
         run: () => {
           if (this.dropTypeName) {
             this.scene.createDrop(sprite.x, sprite.y, this.dropTypeName);
           }
           this.removed = true;
           this.attackSprite?.destroy();
+          sprite.clearTint();
           sprite.destroy();
           this.scene.removeEnemy(this);
         },

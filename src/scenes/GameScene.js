@@ -3,13 +3,14 @@ import { getChapterDefinition } from '../data/chapters.js';
 import { COMBAT_RULES } from '../data/combat.js';
 import { ITEM_DEFINITIONS, getItemAssetPath, getItemDefinition } from '../data/items.js';
 import { parseLegacyMap } from '../data/LegacyMapParser.js';
-import { savePlayerState } from '../data/playerState.js';
+import { clearPlayerStateCache, resetPlayerState, savePlayerState } from '../data/playerState.js';
 import {
   completeChapterProgress,
   isNodeUnlocked,
   loadProgress,
   markBossDefeated,
   markBossTreasureCollected,
+  resetProgress,
   revealWorldNode,
 } from '../data/progress.js';
 import { getMapTriggers } from '../data/mapTriggers.js';
@@ -366,6 +367,9 @@ const MONSTER_DEFINITIONS = Object.freeze({
     bodyWidth: 144,
     bodyHeight: 192,
     collisionBox: { x: -80, y: -80, width: 144, height: 192 },
+    footprintWidthTiles: 5,
+    footprintHeightTiles: 5,
+    spawnOffsetTiles: { x: 0, y: 1 },
     scale: 7.5,
     depth: 24,
     dropTypeName: null,
@@ -404,6 +408,12 @@ export default class GameScene extends Phaser.Scene {
     this.sleepSequence = null;
     this.pauseMenuOpen = false;
     this.pauseCursor = 0;
+    this.pauseMenuMode = 'main';
+    this.pauseDeveloperCursor = 0;
+    this.developerMode = {
+      noClip: false,
+      invincible: false,
+    };
     this.chapterDefinition = null;
     this.chapterClear = false;
     this.chapterClearResult = null;
@@ -438,6 +448,12 @@ export default class GameScene extends Phaser.Scene {
     this.sleepSequence = null;
     this.pauseMenuOpen = false;
     this.pauseCursor = 0;
+    this.pauseMenuMode = 'main';
+    this.pauseDeveloperCursor = 0;
+    this.developerMode = {
+      noClip: false,
+      invincible: false,
+    };
     this.chapterDefinition = null;
     this.chapterClear = false;
     this.chapterClearResult = null;
@@ -621,6 +637,7 @@ export default class GameScene extends Phaser.Scene {
       this.restorePlayerVitals();
       savePlayerState(this.player.toState());
     }
+    this.restoreBossTreasureIfNeeded();
     if (this.mapKey === 'worldV3') {
       this.enemies.push(
         new TrainingSlime(
@@ -715,6 +732,10 @@ export default class GameScene extends Phaser.Scene {
   }
 
   getMusicKey() {
+    if (this.chapterId === 'bossGate' && this.bossEncounter?.battleActive) {
+      return 'music-boss';
+    }
+
     if (this.chapterId === 'dungeon') {
       return 'music-dungeon';
     }
@@ -916,16 +937,19 @@ export default class GameScene extends Phaser.Scene {
       }
 
       if (entity.category === 'MON' && MONSTER_DEFINITIONS[entity.typeName]) {
-        if (entity.typeName === 'MON_SkeletonLord' && this.progress?.bossDefeated) {
-          return;
-        }
-
         const monsterDefinition = MONSTER_DEFINITIONS[entity.typeName];
+        const footprintWidthTiles = monsterDefinition.footprintWidthTiles ?? 1;
+        const footprintHeightTiles = monsterDefinition.footprintHeightTiles ?? 1;
+        const spawnOffsetTiles = monsterDefinition.spawnOffsetTiles ?? { x: 0, y: 0 };
         const monster = new LegacyMonster(this, {
           ...monsterDefinition,
           typeName: entity.typeName,
-          x: entity.x * this.tileSize + this.tileSize / 2,
-          y: entity.y * this.tileSize + this.tileSize / 2,
+          x: entity.x * this.tileSize
+            + (footprintWidthTiles * this.tileSize) / 2
+            + (spawnOffsetTiles.x * this.tileSize),
+          y: entity.y * this.tileSize
+            + (footprintHeightTiles * this.tileSize) / 2
+            + (spawnOffsetTiles.y * this.tileSize),
           animationKey: `legacy-${entity.typeName.toLowerCase()}-idle`,
         });
 
@@ -1046,20 +1070,30 @@ export default class GameScene extends Phaser.Scene {
     this.bossEncounter = {
       cutsceneStarted: false,
       battleActive: false,
-      defeated: Boolean(this.progress?.bossDefeated),
+      defeated: false,
       treasureCreated: false,
+      treasureCollected: false,
     };
-
-    if (this.progress?.bossDefeated) {
-      this.openBossDoors({ animated: false, silent: true });
-      this.createBossTreasure();
-      return;
-    }
 
     if (this.bossMonster) {
       this.bossMonster.sleep = true;
       this.bossMonster.sprite.setTint(0x9ca3af);
     }
+  }
+
+  restoreBossTreasureIfNeeded() {
+    if (
+      !this.progress?.bossTreasureCollected
+      || !this.player
+      || this.player.inventory.count('blueHeart') > 0
+      || !this.player.inventory.canAdd('blueHeart')
+    ) {
+      return;
+    }
+
+    this.player.inventory.add('blueHeart');
+    savePlayerState(this.player.toState());
+    this.addCombatMessage('The Blue Heart has been restored to your pack.');
   }
 
   getBossMonster() {
@@ -1077,7 +1111,6 @@ export default class GameScene extends Phaser.Scene {
   startBossCutscene(trigger = null) {
     if (
       this.chapterId !== 'bossGate'
-      || this.progress?.bossDefeated
       || this.bossEncounter?.cutsceneStarted
       || this.bossEncounter?.battleActive
     ) {
@@ -1120,7 +1153,7 @@ export default class GameScene extends Phaser.Scene {
 
   startBossBattle() {
     const boss = this.getBossMonster();
-    if (!boss || boss.defeated || this.progress?.bossDefeated) {
+    if (!boss || boss.defeated) {
       this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
       return;
     }
@@ -1148,6 +1181,7 @@ export default class GameScene extends Phaser.Scene {
       cutsceneStarted: true,
       battleActive: false,
       defeated: true,
+      treasureCollected: this.player.inventory.count('blueHeart') > 0,
     };
     this.progress = markBossDefeated();
     this.audio?.playMusic('music-dungeon');
@@ -1229,7 +1263,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   createBossTreasure() {
-    if (this.progress?.bossTreasureCollected || this.bossEncounter?.treasureCreated) {
+    if (this.bossEncounter?.treasureCreated) {
+      return;
+    }
+
+    if (this.player?.inventory.count('blueHeart') > 0) {
+      this.bossEncounter.treasureCreated = true;
       return;
     }
 
@@ -1471,7 +1510,7 @@ export default class GameScene extends Phaser.Scene {
   createConfirmPanel() {
     this.confirmPanel = this.add.container(0, 0)
       .setScrollFactor(0)
-      .setDepth(115)
+      .setDepth(130)
       .setVisible(false);
 
     this.confirmBackdrop = this.add.rectangle(0, 0, 1, 1, 0x020617, 0.45).setOrigin(0);
@@ -1542,7 +1581,7 @@ export default class GameScene extends Phaser.Scene {
       stroke: '#020617',
       strokeThickness: 4,
     }).setOrigin(0.5);
-    this.pauseOptions = [
+    this.pauseMainOptions = [
       this.add.text(0, 0, 'Resume', {
         fontFamily: 'MaruMonica',
         fontSize: '30px',
@@ -1553,16 +1592,54 @@ export default class GameScene extends Phaser.Scene {
         fontSize: '30px',
         color: '#f8fafc',
       }).setOrigin(0.5),
+      this.add.text(0, 0, 'Developer Mode', {
+        fontFamily: 'MaruMonica',
+        fontSize: '30px',
+        color: '#f8fafc',
+      }).setOrigin(0.5),
       this.add.text(0, 0, 'Return to World Map', {
         fontFamily: 'MaruMonica',
         fontSize: '30px',
         color: '#f8fafc',
       }).setOrigin(0.5),
     ];
+    this.pauseDeveloperOptions = [
+      this.add.text(0, 0, '', {
+        fontFamily: 'MaruMonica',
+        fontSize: '28px',
+        color: '#f8fafc',
+      }).setOrigin(0.5),
+      this.add.text(0, 0, '', {
+        fontFamily: 'MaruMonica',
+        fontSize: '28px',
+        color: '#f8fafc',
+      }).setOrigin(0.5),
+      this.add.text(0, 0, 'Restore HP / MP', {
+        fontFamily: 'MaruMonica',
+        fontSize: '28px',
+        color: '#f8fafc',
+      }).setOrigin(0.5),
+      this.add.text(0, 0, 'Restore Map', {
+        fontFamily: 'MaruMonica',
+        fontSize: '28px',
+        color: '#f8fafc',
+      }).setOrigin(0.5),
+      this.add.text(0, 0, 'Clear Save', {
+        fontFamily: 'MaruMonica',
+        fontSize: '28px',
+        color: '#f8fafc',
+      }).setOrigin(0.5),
+      this.add.text(0, 0, 'Back', {
+        fontFamily: 'MaruMonica',
+        fontSize: '28px',
+        color: '#f8fafc',
+      }).setOrigin(0.5),
+    ];
+    this.pauseOptions = this.pauseMainOptions;
     this.pauseHint = this.add.text(
       0,
       0,
-      'W / S: select    F / Enter: confirm\nA / D: adjust volume',
+      '',
       {
         fontFamily: 'MaruMonica',
         fontSize: '19px',
@@ -1580,11 +1657,12 @@ export default class GameScene extends Phaser.Scene {
       this.pauseFrame,
       this.pauseTitle,
       this.pauseChapter,
-      ...this.pauseOptions,
+      ...this.pauseMainOptions,
+      ...this.pauseDeveloperOptions,
       this.pauseHint,
       this.pauseCursorText,
     ]);
-    this.updatePauseVolumeText();
+    this.setPauseMenuMode('main');
     this.layoutPausePanel();
     this.scale.on('resize', this.layoutPausePanel, this);
   }
@@ -1738,18 +1816,23 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const panelWidth = Math.min(520, this.scale.width - 32);
-    const panelHeight = Math.min(360, this.scale.height - 32);
+    const panelHeight = Math.min(440, this.scale.height - 32);
     const panelX = Math.floor((this.scale.width - panelWidth) / 2);
     const panelY = Math.floor((this.scale.height - panelHeight) / 2);
     const centerX = panelX + panelWidth / 2;
+    const optionStartY = panelY + 166;
+    const optionGap = this.pauseMenuMode === 'developer' ? 40 : 54;
 
     this.pauseBackdrop.setSize(this.scale.width, this.scale.height);
     this.pauseFrame.setPosition(panelX, panelY).setSize(panelWidth, panelHeight);
-    this.pauseTitle.setPosition(centerX, panelY + 62);
-    this.pauseChapter.setPosition(centerX, panelY + 108);
-    this.pauseOptions[0].setPosition(centerX, panelY + 166);
-    this.pauseOptions[1].setPosition(centerX, panelY + 220);
-    this.pauseOptions[2].setPosition(centerX, panelY + 274);
+    this.pauseTitle.setPosition(centerX, panelY + 56);
+    this.pauseChapter.setPosition(centerX, panelY + 104);
+    this.pauseOptions.forEach((option, index) => {
+      option.setPosition(centerX, optionStartY + (index * optionGap));
+    });
+    if (this.pauseMenuMode === 'main') {
+      this.pauseMainOptions[1]?.setText(`Volume: ${Math.round((this.audio?.getMasterVolume() ?? 0) * 100)}%`);
+    }
     this.pauseHint.setWordWrapWidth(panelWidth - 32);
     this.pauseHint.setPosition(centerX, panelY + panelHeight - 24);
     this.updatePauseCursor();
@@ -2097,6 +2180,10 @@ export default class GameScene extends Phaser.Scene {
   }
 
   canPlayerOccupy(x, y) {
+    if (this.developerMode?.noClip) {
+      return true;
+    }
+
     const bounds = this.getPlayerCollisionBounds(x, y);
     const epsilon = 0.001;
     const leftCol = Math.floor(bounds.left / this.tileSize);
@@ -2466,8 +2553,10 @@ export default class GameScene extends Phaser.Scene {
       if (this.player) {
         savePlayerState(this.player.toState());
       }
-      this.scene.start(entry.scene ?? 'ShopScene', {
+      this.scene.pause();
+      this.scene.launch(entry.scene ?? 'ShopScene', {
         shopId: entry.shopId,
+        returnSceneKey: this.scene.key,
         returnNodeId: entry.returnNodeId ?? this.returnNodeId,
       });
       return;
@@ -2542,8 +2631,7 @@ export default class GameScene extends Phaser.Scene {
     if (
       trigger.kind === 'boss-cutscene'
       && (
-        this.progress?.bossDefeated
-        || this.bossEncounter?.cutsceneStarted
+        this.bossEncounter?.cutsceneStarted
         || this.bossEncounter?.battleActive
       )
     ) {
@@ -2753,17 +2841,44 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.pauseMenuOpen = true;
-    this.pauseCursor = 0;
+    this.setPauseMenuMode('main');
     this.player.sprite.setVelocity(0, 0);
     this.enemies.forEach((enemy) => enemy.sprite?.setVelocity(0, 0));
-    this.updatePauseVolumeText();
     this.pausePanel.setVisible(true);
     this.updatePauseCursor();
   }
 
   closePauseMenu() {
     this.pauseMenuOpen = false;
+    this.pauseMenuMode = 'main';
     this.pausePanel.setVisible(false);
+  }
+
+  setPauseMenuMode(mode) {
+    this.pauseMenuMode = mode === 'developer' ? 'developer' : 'main';
+    this.pauseCursor = 0;
+    this.pauseOptions = this.pauseMenuMode === 'developer'
+      ? this.pauseDeveloperOptions
+      : this.pauseMainOptions;
+
+    if (this.pauseTitle) {
+      this.pauseTitle.setText(this.pauseMenuMode === 'developer' ? 'Developer Mode' : 'Paused');
+    }
+
+    if (this.pauseChapter) {
+      this.pauseChapter.setText(
+        this.pauseMenuMode === 'developer'
+          ? 'Cheats and maintenance'
+          : this.chapterName,
+      );
+    }
+
+    this.pauseMainOptions?.forEach((option) => option.setVisible(this.pauseMenuMode === 'main'));
+    this.pauseDeveloperOptions?.forEach((option) => option.setVisible(this.pauseMenuMode === 'developer'));
+    this.updatePauseVolumeText();
+    this.updatePauseDeveloperText();
+    this.updatePauseHintText();
+    this.layoutPausePanel();
   }
 
   updatePauseCursor() {
@@ -2781,7 +2896,34 @@ export default class GameScene extends Phaser.Scene {
     );
   }
 
+  updatePauseHintText() {
+    if (!this.pauseHint) {
+      return;
+    }
+
+    this.pauseHint.setText(
+      this.pauseMenuMode === 'developer'
+        ? 'W / S: select    F / Enter: confirm\nESC: back'
+        : 'W / S: select    F / Enter: confirm\nA / D: adjust volume',
+    );
+  }
+
   updatePauseInput() {
+    const cancelJustDown = Phaser.Input.Keyboard.JustDown(this.keys.cancel);
+    const pauseJustDown = Phaser.Input.Keyboard.JustDown(this.keys.pause) || this.pendingPause;
+    this.pendingPause = false;
+
+    if (this.pauseMenuMode === 'developer' && cancelJustDown) {
+      this.setPauseMenuMode('main');
+      this.audio?.playSfx('sfx-cursor', { volume: 0.45 });
+      return;
+    }
+
+    if (this.pauseMenuMode === 'main' && (cancelJustDown || pauseJustDown)) {
+      this.closePauseMenu();
+      return;
+    }
+
     const movedUp = (
       Phaser.Input.Keyboard.JustDown(this.cursors.up)
       || Phaser.Input.Keyboard.JustDown(this.keys.up)
@@ -2800,7 +2942,7 @@ export default class GameScene extends Phaser.Scene {
       this.audio?.playSfx('sfx-cursor', { volume: 0.45 });
     }
 
-    if (this.pauseCursor === 1) {
+    if (this.pauseMenuMode === 'main' && this.pauseCursor === 1) {
       const volumeUp = (
         Phaser.Input.Keyboard.JustDown(this.cursors.right)
         || Phaser.Input.Keyboard.JustDown(this.keys.right)
@@ -2821,37 +2963,128 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    if (
-      Phaser.Input.Keyboard.JustDown(this.keys.cancel)
-      || this.consumePauseInput()
-    ) {
-      this.closePauseMenu();
-      return;
-    }
-
     if (!this.consumeConfirmInput()) {
       return;
     }
 
+    if (this.pauseMenuMode === 'main') {
+      if (this.pauseCursor === 0) {
+        this.closePauseMenu();
+        return;
+      }
+
+      if (this.pauseCursor === 1) {
+        return;
+      }
+
+      if (this.pauseCursor === 2) {
+        this.setPauseMenuMode('developer');
+        return;
+      }
+
+      if (this.pauseCursor === 3) {
+        this.returnToWorldMap({}, { savePlayerState: false });
+      }
+      return;
+    }
+
     if (this.pauseCursor === 0) {
-      this.closePauseMenu();
+      this.toggleDeveloperNoClip();
       return;
     }
 
     if (this.pauseCursor === 1) {
+      this.toggleDeveloperInvincible();
       return;
     }
 
-    this.returnToWorldMap({}, { savePlayerState: false });
+    if (this.pauseCursor === 2) {
+      this.restorePlayerVitals();
+      savePlayerState(this.player.toState());
+      this.addCombatMessage('HP and MP restored.');
+      return;
+    }
+
+    if (this.pauseCursor === 3) {
+      this.confirmResetProgress();
+      return;
+    }
+
+    if (this.pauseCursor === 4) {
+      this.confirmClearSave();
+      return;
+    }
+
+    if (this.pauseCursor === 5) {
+      this.setPauseMenuMode('main');
+    }
   }
 
   updatePauseVolumeText() {
-    if (!this.pauseOptions?.[1]) {
+    if (!this.pauseMainOptions?.[1]) {
       return;
     }
 
     const volume = Math.round((this.audio?.getMasterVolume() ?? 0) * 100);
-    this.pauseOptions[1].setText(`Volume: ${volume}%`);
+    this.pauseMainOptions[1].setText(`Volume: ${volume}%`);
+  }
+
+  updatePauseDeveloperText() {
+    if (!this.pauseDeveloperOptions?.length) {
+      return;
+    }
+
+    this.pauseDeveloperOptions[0].setText(`No Clip: ${this.developerMode.noClip ? 'On' : 'Off'}`);
+    this.pauseDeveloperOptions[1].setText(`Invincible: ${this.developerMode.invincible ? 'On' : 'Off'}`);
+  }
+
+  toggleDeveloperNoClip() {
+    this.developerMode.noClip = !this.developerMode.noClip;
+    this.updatePauseDeveloperText();
+    this.updatePauseCursor();
+    this.audio?.playSfx('sfx-cursor', { volume: 0.45 });
+  }
+
+  toggleDeveloperInvincible() {
+    this.developerMode.invincible = !this.developerMode.invincible;
+    if (this.developerMode.invincible && this.player?.stats) {
+      this.player.stats.life = Math.max(1, this.player.stats.life);
+    }
+    this.updatePauseDeveloperText();
+    this.updatePauseCursor();
+    this.audio?.playSfx('sfx-cursor', { volume: 0.45 });
+  }
+
+  confirmResetProgress() {
+    this.openConfirmPrompt({
+      title: 'Developer Mode',
+      message: 'Reset world map progress?',
+      onConfirm: () => {
+        this.progress = resetProgress();
+        this.addCombatMessage('World map progress restored.');
+        this.returnToWorldMap({ worldMessage: 'World map restored.' }, { savePlayerState: false });
+      },
+      onCancel: () => {
+        this.setPauseMenuMode('developer');
+      },
+    });
+  }
+
+  confirmClearSave() {
+    this.openConfirmPrompt({
+      title: 'Developer Mode',
+      message: 'Clear save data and return to the world map?',
+      onConfirm: () => {
+        clearPlayerStateCache();
+        resetPlayerState();
+        this.progress = resetProgress();
+        this.addCombatMessage('Save data cleared.');
+        this.returnToWorldMap({ worldMessage: 'Save cleared.' }, { savePlayerState: false });
+      },
+      onCancel: () => {
+        this.setPauseMenuMode('developer');
+      },
+    });
   }
 
   returnToWorldMap(extraData = {}, options = {}) {
@@ -2869,6 +3102,19 @@ export default class GameScene extends Phaser.Scene {
       lastChapterId: this.chapterId,
       ...extraData,
     });
+  }
+
+  onShopReturn(playerState, returnMessage = '') {
+    if (this.player && playerState) {
+      this.player.applyState(playerState);
+    }
+
+    if (returnMessage) {
+      this.addCombatMessage(returnMessage);
+    }
+
+    this.audio?.playMusic(this.getMusicKey());
+    this.updateHud();
   }
 
   restorePlayerVitals() {
@@ -2923,12 +3169,37 @@ export default class GameScene extends Phaser.Scene {
     this.chapterClearText.setText([
       this.chapterDefinition.clearText ?? 'Objective complete.',
       unlockedText,
+      this.getChapterClearContinueText(),
     ].filter(Boolean).join('\n'));
     this.chapterClearPanel.setVisible(true);
   }
 
   updateChapterClearInput() {
     if (!this.consumeConfirmInput() && !this.consumeInteractInput()) {
+      return;
+    }
+
+    this.advanceFromChapterClear();
+  }
+
+  advanceFromChapterClear() {
+    const nextChapterId = this.chapterDefinition?.nextChapterId ?? null;
+
+    if (nextChapterId) {
+      const nextChapter = getChapterDefinition(nextChapterId);
+      const nextNode = getWorldNode(nextChapterId);
+
+      if (this.player) {
+        savePlayerState(this.player.toState());
+      }
+
+      this.audio?.stopMusic();
+      this.scene.start('GameScene', {
+        chapterId: nextChapterId,
+        chapterName: nextChapter?.name ?? nextChapterId,
+        returnNodeId: nextNode?.id ?? this.returnNodeId,
+        spawn: nextNode?.spawn ?? this.spawnTile,
+      });
       return;
     }
 
@@ -3006,10 +3277,10 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (this.chapterDefinition.type === 'bossEncounter') {
-      if (this.progress?.bossTreasureCollected) {
+      if (this.bossEncounter?.treasureCollected) {
         return 'Objective: Complete';
       }
-      if (this.progress?.bossDefeated || this.bossEncounter?.defeated) {
+      if (this.bossEncounter?.defeated) {
         return 'Objective: Claim the Blue Heart';
       }
       if (this.bossEncounter?.battleActive) {
@@ -3043,6 +3314,17 @@ export default class GameScene extends Phaser.Scene {
     }
 
     return `${this.chapterName} cleared. ${labels.join(', ')} unlocked.`;
+  }
+
+  getChapterClearContinueText() {
+    const nextChapterId = this.chapterDefinition?.nextChapterId ?? null;
+
+    if (nextChapterId) {
+      const nextName = getChapterDefinition(nextChapterId)?.name ?? nextChapterId;
+      return `Press F / Enter to continue to ${nextName}.`;
+    }
+
+    return 'Press F / Enter to return to the World Map.';
   }
 
   openChest(chest) {
@@ -3174,8 +3456,18 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (pickup.kind === 'bossTreasure') {
-      markBossTreasureCollected();
+      const added = this.player.inventory.add('blueHeart');
+      if (!added) {
+        this.addCombatMessage("You can't carry the Blue Heart.");
+        return false;
+      }
+
+      this.progress = markBossTreasureCollected();
       this.progress = completeChapterProgress('bossGate', []).progress;
+      this.bossEncounter = {
+        ...(this.bossEncounter ?? {}),
+        treasureCollected: true,
+      };
       savePlayerState(this.player.toState());
       this.audio?.playSfx('sfx-fanfare', { volume: 0.65 });
       this.openDialogue('Blue Heart', ['You find the Blue Heart, the legendary treasure!'], entity, {
@@ -3194,7 +3486,10 @@ export default class GameScene extends Phaser.Scene {
 
     this.audio?.stopMusic();
     this.scene.start('CreditsScene', {
-      returnNodeId: this.returnNodeId,
+      returnSceneKey: 'TitleScene',
+      returnSceneData: {
+        bannerText: 'The Blue Heart has been claimed.',
+      },
     });
   }
 
@@ -3250,7 +3545,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   enterGameOver() {
-    if (this.gameOver) {
+    if (this.gameOver || this.developerMode?.invincible) {
       return;
     }
 
@@ -3479,6 +3774,12 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.confirmPrompt) {
+      this.updateConfirmInput();
+      this.updateHud();
+      return;
+    }
+
     if (this.pauseMenuOpen) {
       this.updatePauseInput();
       this.updateHud();
@@ -3486,12 +3787,6 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (this.sleepSequence) {
-      this.updateHud();
-      return;
-    }
-
-    if (this.confirmPrompt) {
-      this.updateConfirmInput();
       this.updateHud();
       return;
     }

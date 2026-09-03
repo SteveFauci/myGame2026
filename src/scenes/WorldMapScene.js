@@ -533,8 +533,10 @@ export default class WorldMapScene extends Phaser.Scene {
     );
 
     if (entry.type === 'shop') {
-      this.scene.start(entry.scene ?? 'ShopScene', {
+      this.scene.pause();
+      this.scene.launch(entry.scene ?? 'ShopScene', {
         shopId: entry.shopId,
+        returnSceneKey: this.scene.key,
         returnNodeId: entry.returnNodeId ?? this.nearNode.id,
       });
       return;
@@ -551,6 +553,20 @@ export default class WorldMapScene extends Phaser.Scene {
       returnNodeId: this.nearNode.id,
       spawn: this.nearNode.spawn,
     });
+  }
+
+  onShopReturn(_playerState, returnMessage = '') {
+    this.progress = loadProgress();
+    this.audio?.playMusic('music-overworld');
+
+    if (returnMessage) {
+      this.arrivalMessage = returnMessage;
+      this.statusText.setText(returnMessage);
+      this.time.delayedCall(2400, () => this.updateNearbyNode(true));
+      return;
+    }
+
+    this.updateNearbyNode(true);
   }
 
   getNode(nodeId) {

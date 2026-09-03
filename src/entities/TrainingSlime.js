@@ -156,27 +156,26 @@ export default class TrainingSlime {
 
   playDeathAnimation() {
     const sprite = this.sprite;
+    sprite.setTint(0xffffff);
     this.scene.add.timeline([
-      { at: 0, tween: { targets: sprite, alpha: 0.25, duration: 60 } },
-      { at: 60, tween: { targets: sprite, alpha: 1, duration: 60 } },
-      { at: 120, tween: { targets: sprite, alpha: 0.25, duration: 60 } },
+      { at: 0, tween: { targets: sprite, alpha: 0.2, duration: 45 } },
+      { at: 45, tween: { targets: sprite, alpha: 1, duration: 45 } },
+      { at: 90, tween: { targets: sprite, alpha: 0.2, duration: 45 } },
       {
-        at: 180,
+        at: 135,
         tween: {
           targets: sprite,
           alpha: 0,
-          scaleX: 4,
-          scaleY: 4,
-          angle: 8,
-          duration: 220,
-          ease: 'Cubic.easeIn',
+          duration: 90,
+          ease: 'Linear',
         },
       },
       {
-        at: 410,
+        at: 230,
         run: () => {
           this.scene.createDrop(sprite.x, sprite.y);
           this.removed = true;
+          sprite.clearTint();
           sprite.destroy();
           this.scene.removeEnemy(this);
         },
