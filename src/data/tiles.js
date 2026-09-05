@@ -4,8 +4,8 @@ const SOLID_TILE_IDS = new Set([
   ...Array.from({ length: 14 }, (_, index) => index + 12),
   40,
   41,
-  43,
   44,
+  45,
 ]);
 
 export function isLegacyTileSolid(tileId) {

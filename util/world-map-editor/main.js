@@ -8,6 +8,7 @@ import './style.css';
 const STORAGE_KEY = 'myGame2026.worldMapEditor.draft.v1';
 const ICON_SOURCES = Object.freeze({
   'world-hut': '/tiles/hut.png',
+  'world-tree': '/tiles/tree.png',
   'world-slime-1': '/monsters/greenslime_down_1.png',
   'world-stairs': '/tiles/stairs1.png',
   'world-door-iron': '/objects/door_iron.png',
@@ -16,6 +17,7 @@ const ICON_SOURCES = Object.freeze({
 });
 const NODE_ICON_OPTIONS = Object.freeze([
   ['world-hut', 'Hut'],
+  ['world-tree', 'Tree'],
   ['world-slime-1', 'Slime'],
   ['world-stairs', 'Stairs'],
   ['world-door-iron', 'Door'],
