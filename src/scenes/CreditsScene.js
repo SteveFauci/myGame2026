@@ -47,6 +47,7 @@ export default class CreditsScene extends Phaser.Scene {
     super('CreditsScene');
     this.returnSceneKey = 'TitleScene';
     this.returnSceneData = {};
+    this.returnMode = 'start';
     this.phase = 'story';
     this.elapsed = 0;
   }
@@ -54,6 +55,7 @@ export default class CreditsScene extends Phaser.Scene {
   init(data = {}) {
     this.returnSceneKey = data.returnSceneKey ?? 'TitleScene';
     this.returnSceneData = data.returnSceneData ?? {};
+    this.returnMode = data.returnMode ?? 'start';
     this.phase = 'story';
     this.elapsed = 0;
   }
@@ -188,7 +190,7 @@ export default class CreditsScene extends Phaser.Scene {
   returnToReturnScene() {
     const returnScene = this.returnSceneKey ? this.scene.get(this.returnSceneKey) : null;
 
-    if (returnScene) {
+    if (this.returnMode === 'resume' && returnScene) {
       returnScene.onCreditsReturn?.(this.returnSceneData);
       this.scene.resume(this.returnSceneKey);
       this.scene.stop();

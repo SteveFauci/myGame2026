@@ -2507,6 +2507,11 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (target.travelEntry) {
+      this.startTravelEntry(target.travelEntry);
+      return;
+    }
+
     if (target.typeName === 'OBJ_Chest') {
       this.openChest(target);
     }
@@ -2522,7 +2527,9 @@ export default class GameScene extends Phaser.Scene {
 
     const result = revealWorldNode(nodeId);
     sourceEntity.triggerNodeId = null;
-    sourceEntity.interactable = false;
+    if (!sourceEntity.travelEntry) {
+      sourceEntity.interactable = false;
+    }
 
     if (sourceEntity.travelEntry) {
       this.audio?.playSfx('sfx-unlock', { volume: 0.55 });
@@ -2553,6 +2560,8 @@ export default class GameScene extends Phaser.Scene {
       if (this.player) {
         savePlayerState(this.player.toState());
       }
+      this.clearBufferedInput();
+      this.resetTransientCombatState();
       this.scene.pause();
       this.scene.launch(entry.scene ?? 'ShopScene', {
         shopId: entry.shopId,
@@ -3109,6 +3118,9 @@ export default class GameScene extends Phaser.Scene {
       this.player.applyState(playerState);
     }
 
+    this.resetTransientCombatState();
+    this.clearBufferedInput();
+
     if (returnMessage) {
       this.addCombatMessage(returnMessage);
     }
@@ -3127,6 +3139,32 @@ export default class GameScene extends Phaser.Scene {
     this.player.dead = false;
     this.player.knockbackState = null;
     this.player.invulnerableUntil = 0;
+  }
+
+  clearBufferedInput() {
+    this.pendingAttack = false;
+    this.pendingRangedAttack = false;
+    this.pendingInteract = false;
+    this.pendingConfirm = false;
+    this.pendingPause = false;
+  }
+
+  resetTransientCombatState() {
+    if (!this.player) {
+      return;
+    }
+
+    this.player.attackState = null;
+    this.player.guarding = false;
+    this.player.guardElapsed = 0;
+    this.player.guardPressedAt = -Infinity;
+    this.player.knockbackState = null;
+    this.player.invulnerableUntil = 0;
+    this.player.dead = false;
+    this.player.sprite.setVelocity(0, 0);
+    this.player.sprite.setVisible(true);
+    this.player.attackSprite.setVisible(false);
+    this.player.sprite.setTexture(this.player.getStandingTexture());
   }
 
   restartChapter() {
@@ -3487,6 +3525,7 @@ export default class GameScene extends Phaser.Scene {
     this.audio?.stopMusic();
     this.scene.start('CreditsScene', {
       returnSceneKey: 'TitleScene',
+      returnMode: 'start',
       returnSceneData: {
         bannerText: 'The Blue Heart has been claimed.',
       },
