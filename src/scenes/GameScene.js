@@ -3,7 +3,12 @@ import { getChapterDefinition } from '../data/chapters.js';
 import { COMBAT_RULES } from '../data/combat.js';
 import { ITEM_DEFINITIONS, getItemAssetPath, getItemDefinition } from '../data/items.js';
 import { parseLegacyMap } from '../data/LegacyMapParser.js';
-import { clearPlayerStateCache, resetPlayerState, savePlayerState } from '../data/playerState.js';
+import {
+  clearPlayerStateCache,
+  resetPlayerState,
+  savePlayerState,
+} from '../data/playerState.js';
+import { publicPath } from '../data/publicPath.js';
 import {
   completeChapterProgress,
   isNodeUnlocked,
@@ -407,9 +412,11 @@ export default class GameScene extends Phaser.Scene {
     this.confirmPrompt = null;
     this.sleepSequence = null;
     this.pauseMenuOpen = false;
-    this.pauseCursor = 0;
     this.pauseMenuMode = 'main';
-    this.pauseDeveloperCursor = 0;
+    this.pauseCursor = 0;
+    this.pauseOptions = [];
+    this.pauseMainOptions = [];
+    this.pauseDeveloperOptions = [];
     this.developerMode = {
       noClip: false,
       invincible: false,
@@ -447,9 +454,11 @@ export default class GameScene extends Phaser.Scene {
     this.confirmPrompt = null;
     this.sleepSequence = null;
     this.pauseMenuOpen = false;
-    this.pauseCursor = 0;
     this.pauseMenuMode = 'main';
-    this.pauseDeveloperCursor = 0;
+    this.pauseCursor = 0;
+    this.pauseOptions = [];
+    this.pauseMainOptions = [];
+    this.pauseDeveloperOptions = [];
     this.developerMode = {
       noClip: false,
       invincible: false,
@@ -475,109 +484,109 @@ export default class GameScene extends Phaser.Scene {
   preload() {
     preloadAudio(this.load);
     Object.entries(MAP_TEXT_ASSETS).forEach(([key, path]) => {
-      this.load.text(key, path);
+      this.load.text(key, publicPath(path));
     });
 
-    this.load.image('playerDown1', '/player/boy_down_1.png');
-    this.load.image('playerDown2', '/player/boy_down_2.png');
-    this.load.image('playerUp1', '/player/boy_up_1.png');
-    this.load.image('playerUp2', '/player/boy_up_2.png');
-    this.load.image('playerLeft1', '/player/boy_left_1.png');
-    this.load.image('playerLeft2', '/player/boy_left_2.png');
-    this.load.image('playerRight1', '/player/boy_right_1.png');
-    this.load.image('playerRight2', '/player/boy_right_2.png');
+    this.load.image('playerDown1', publicPath('/player/boy_down_1.png'));
+    this.load.image('playerDown2', publicPath('/player/boy_down_2.png'));
+    this.load.image('playerUp1', publicPath('/player/boy_up_1.png'));
+    this.load.image('playerUp2', publicPath('/player/boy_up_2.png'));
+    this.load.image('playerLeft1', publicPath('/player/boy_left_1.png'));
+    this.load.image('playerLeft2', publicPath('/player/boy_left_2.png'));
+    this.load.image('playerRight1', publicPath('/player/boy_right_1.png'));
+    this.load.image('playerRight2', publicPath('/player/boy_right_2.png'));
 
     ['up', 'down', 'left', 'right'].forEach((direction) => {
       this.load.image(
         `playerAttack${this.capitalize(direction)}1`,
-        `/player/boy_attack_${direction}_1.png`,
+        publicPath(`/player/boy_attack_${direction}_1.png`),
       );
       this.load.image(
         `playerAttack${this.capitalize(direction)}2`,
-        `/player/boy_attack_${direction}_2.png`,
+        publicPath(`/player/boy_attack_${direction}_2.png`),
       );
       this.load.image(
         `playerGuard${this.capitalize(direction)}`,
-        `/player/boy_guard_${direction}.png`,
+        publicPath(`/player/boy_guard_${direction}.png`),
       );
       this.load.image(
         `playerAxe${this.capitalize(direction)}1`,
-        `/player/boy_axe_${direction}_1.png`,
+        publicPath(`/player/boy_axe_${direction}_1.png`),
       );
       this.load.image(
         `playerAxe${this.capitalize(direction)}2`,
-        `/player/boy_axe_${direction}_2.png`,
+        publicPath(`/player/boy_axe_${direction}_2.png`),
       );
       this.load.image(
         `playerPick${this.capitalize(direction)}1`,
-        `/player/boy_pick_${direction}_1.png`,
+        publicPath(`/player/boy_pick_${direction}_1.png`),
       );
       this.load.image(
         `playerPick${this.capitalize(direction)}2`,
-        `/player/boy_pick_${direction}_2.png`,
+        publicPath(`/player/boy_pick_${direction}_2.png`),
       );
     });
 
-    this.load.image('slimeDown1', '/monsters/greenslime_down_1.png');
-    this.load.image('slimeDown2', '/monsters/greenslime_down_2.png');
+    this.load.image('slimeDown1', publicPath('/monsters/greenslime_down_1.png'));
+    this.load.image('slimeDown2', publicPath('/monsters/greenslime_down_2.png'));
     ['up', 'down', 'left', 'right'].forEach((direction) => {
       this.load.image(
         `legacy-orc-attack-${direction}-1`,
-        `/monsters/orc_attack_${direction}_1.png`,
+        publicPath(`/monsters/orc_attack_${direction}_1.png`),
       );
       this.load.image(
         `legacy-orc-attack-${direction}-2`,
-        `/monsters/orc_attack_${direction}_2.png`,
+        publicPath(`/monsters/orc_attack_${direction}_2.png`),
       );
     });
     ['up', 'down', 'left', 'right'].forEach((direction) => {
       this.load.image(
         `legacy-skeletonlord-${direction}-1`,
-        `/monsters/skeletonlord_${direction}_1.png`,
+        publicPath(`/monsters/skeletonlord_${direction}_1.png`),
       );
       this.load.image(
         `legacy-skeletonlord-${direction}-2`,
-        `/monsters/skeletonlord_${direction}_2.png`,
+        publicPath(`/monsters/skeletonlord_${direction}_2.png`),
       );
       this.load.image(
         `legacy-skeletonlord-attack-${direction}-1`,
-        `/monsters/skeletonlord_attack_${direction}_1.png`,
+        publicPath(`/monsters/skeletonlord_attack_${direction}_1.png`),
       );
       this.load.image(
         `legacy-skeletonlord-attack-${direction}-2`,
-        `/monsters/skeletonlord_attack_${direction}_2.png`,
+        publicPath(`/monsters/skeletonlord_attack_${direction}_2.png`),
       );
       this.load.image(
         `legacy-skeletonlord-phase2-${direction}-1`,
-        `/monsters/skeletonlord_phase2_${direction}_1.png`,
+        publicPath(`/monsters/skeletonlord_phase2_${direction}_1.png`),
       );
       this.load.image(
         `legacy-skeletonlord-phase2-${direction}-2`,
-        `/monsters/skeletonlord_phase2_${direction}_2.png`,
+        publicPath(`/monsters/skeletonlord_phase2_${direction}_2.png`),
       );
       this.load.image(
         `legacy-skeletonlord-phase2-attack-${direction}-1`,
-        `/monsters/skeletonlord_phase2_attack_${direction}_1.png`,
+        publicPath(`/monsters/skeletonlord_phase2_attack_${direction}_1.png`),
       );
       this.load.image(
         `legacy-skeletonlord-phase2-attack-${direction}-2`,
-        `/monsters/skeletonlord_phase2_attack_${direction}_2.png`,
+        publicPath(`/monsters/skeletonlord_phase2_attack_${direction}_2.png`),
       );
     });
-    this.load.image('fireballUp1', '/projectile/fireball_up_1.png');
-    this.load.image('fireballUp2', '/projectile/fireball_up_2.png');
-    this.load.image('fireballDown1', '/projectile/fireball_down_1.png');
-    this.load.image('fireballDown2', '/projectile/fireball_down_2.png');
-    this.load.image('fireballLeft1', '/projectile/fireball_left_1.png');
-    this.load.image('fireballLeft2', '/projectile/fireball_left_2.png');
-    this.load.image('fireballRight1', '/projectile/fireball_right_1.png');
-    this.load.image('fireballRight2', '/projectile/fireball_right_2.png');
+    this.load.image('fireballUp1', publicPath('/projectile/fireball_up_1.png'));
+    this.load.image('fireballUp2', publicPath('/projectile/fireball_up_2.png'));
+    this.load.image('fireballDown1', publicPath('/projectile/fireball_down_1.png'));
+    this.load.image('fireballDown2', publicPath('/projectile/fireball_down_2.png'));
+    this.load.image('fireballLeft1', publicPath('/projectile/fireball_left_1.png'));
+    this.load.image('fireballLeft2', publicPath('/projectile/fireball_left_2.png'));
+    this.load.image('fireballRight1', publicPath('/projectile/fireball_right_1.png'));
+    this.load.image('fireballRight2', publicPath('/projectile/fireball_right_2.png'));
 
-    this.load.image('heartFull', '/objects/heart_full.png');
-    this.load.image('heartHalf', '/objects/heart_half.png');
-    this.load.image('heartBlank', '/objects/heart_blank.png');
-    this.load.image('manaFull', '/objects/manacrystal_full.png');
-    this.load.image('manaBlank', '/objects/manacrystal_blank.png');
+    this.load.image('heartFull', publicPath('/objects/heart_full.png'));
+    this.load.image('heartHalf', publicPath('/objects/heart_half.png'));
+    this.load.image('heartBlank', publicPath('/objects/heart_blank.png'));
+    this.load.image('manaFull', publicPath('/objects/manacrystal_full.png'));
+    this.load.image('manaBlank', publicPath('/objects/manacrystal_blank.png'));
     Object.values(ITEM_DEFINITIONS).forEach((item) => {
       const assetPath = getItemAssetPath(item);
       if (assetPath) {
@@ -587,18 +596,18 @@ export default class GameScene extends Phaser.Scene {
 
     Object.values(LEGACY_ENTITY_ASSETS).forEach((asset) => {
       if (asset.path) {
-        this.load.image(asset.textureKey, asset.path);
+        this.load.image(asset.textureKey, publicPath(asset.path));
       }
       if (asset.path2) {
-        this.load.image(asset.textureKey2, asset.path2);
+        this.load.image(asset.textureKey2, publicPath(asset.path2));
       }
       if (asset.destroyedPath) {
-        this.load.image(asset.destroyedTextureKey, asset.destroyedPath);
+        this.load.image(asset.destroyedTextureKey, publicPath(asset.destroyedPath));
       }
     });
 
     TILE_NAMES.forEach((tileName) => {
-      this.load.image(`tile-${tileName}`, `/tiles/${tileName}.png`);
+      this.load.image(`tile-${tileName}`, publicPath(`/tiles/${tileName}.png`));
     });
   }
 
@@ -1132,7 +1141,9 @@ export default class GameScene extends Phaser.Scene {
       this.triggeredMapTriggerIds.add(trigger.id);
     }
 
+    const safePlayerY = Math.max(this.tileSize / 2, this.player.sprite.y - this.tileSize);
     this.player.sprite.setVelocity(0, 0);
+    this.player.sprite.body?.reset(this.player.sprite.x, safePlayerY);
     this.player.attackSprite.setVisible(false);
     this.player.sprite.setVisible(true);
     this.enemies.forEach((enemy) => {
@@ -1830,9 +1841,6 @@ export default class GameScene extends Phaser.Scene {
     this.pauseOptions.forEach((option, index) => {
       option.setPosition(centerX, optionStartY + (index * optionGap));
     });
-    if (this.pauseMenuMode === 'main') {
-      this.pauseMainOptions[1]?.setText(`Volume: ${Math.round((this.audio?.getMasterVolume() ?? 0) * 100)}%`);
-    }
     this.pauseHint.setWordWrapWidth(panelWidth - 32);
     this.pauseHint.setPosition(centerX, panelY + panelHeight - 24);
     this.updatePauseCursor();
@@ -2863,6 +2871,21 @@ export default class GameScene extends Phaser.Scene {
     this.pausePanel.setVisible(false);
   }
 
+  updatePauseCursor() {
+    if (!this.pauseCursorText || !this.pauseOptions) {
+      return;
+    }
+
+    this.pauseOptions.forEach((option, index) => {
+      option.setColor(index === this.pauseCursor ? '#fde68a' : '#f8fafc');
+    });
+    const selectedBounds = this.pauseOptions[this.pauseCursor].getBounds();
+    this.pauseCursorText.setPosition(
+      Math.floor(selectedBounds.x - 24),
+      Math.floor(selectedBounds.y + selectedBounds.height / 2),
+    );
+  }
+
   setPauseMenuMode(mode) {
     this.pauseMenuMode = mode === 'developer' ? 'developer' : 'main';
     this.pauseCursor = 0;
@@ -2888,21 +2911,6 @@ export default class GameScene extends Phaser.Scene {
     this.updatePauseDeveloperText();
     this.updatePauseHintText();
     this.layoutPausePanel();
-  }
-
-  updatePauseCursor() {
-    if (!this.pauseCursorText || !this.pauseOptions) {
-      return;
-    }
-
-    this.pauseOptions.forEach((option, index) => {
-      option.setColor(index === this.pauseCursor ? '#fde68a' : '#f8fafc');
-    });
-    const selectedBounds = this.pauseOptions[this.pauseCursor].getBounds();
-    this.pauseCursorText.setPosition(
-      Math.floor(selectedBounds.x - 24),
-      Math.floor(selectedBounds.y + selectedBounds.height / 2),
-    );
   }
 
   updatePauseHintText() {
@@ -3524,11 +3532,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.audio?.stopMusic();
     this.scene.start('CreditsScene', {
-      returnSceneKey: 'TitleScene',
-      returnMode: 'start',
-      returnSceneData: {
-        bannerText: 'The Blue Heart has been claimed.',
-      },
+      returnNodeId: this.returnNodeId,
     });
   }
 
@@ -3584,7 +3588,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   enterGameOver() {
-    if (this.gameOver || this.developerMode?.invincible) {
+    if (this.gameOver) {
       return;
     }
 

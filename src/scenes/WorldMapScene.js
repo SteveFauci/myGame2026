@@ -9,6 +9,7 @@ import {
   normalizeWorldMapHiddenLabel,
 } from '../data/worldMap.js';
 import { isNodeDiscovered, isNodeUnlocked, loadProgress } from '../data/progress.js';
+import { publicPath } from '../data/publicPath.js';
 import AudioManager, { preloadAudio } from '../systems/AudioManager.js';
 
 const NODE_RADIUS = 48;
@@ -42,31 +43,31 @@ export default class WorldMapScene extends Phaser.Scene {
 
   preload() {
     preloadAudio(this.load);
-    this.load.image('world-player-down-1', '/player/boy_down_1.png');
-    this.load.image('world-player-down-2', '/player/boy_down_2.png');
-    this.load.image('world-player-up-1', '/player/boy_up_1.png');
-    this.load.image('world-player-up-2', '/player/boy_up_2.png');
-    this.load.image('world-player-left-1', '/player/boy_left_1.png');
-    this.load.image('world-player-left-2', '/player/boy_left_2.png');
-    this.load.image('world-player-right-1', '/player/boy_right_1.png');
-    this.load.image('world-player-right-2', '/player/boy_right_2.png');
-    this.load.image('world-grass', '/tiles/grass00.png');
-    this.load.image('world-grass-alt', '/tiles/grass01.png');
-    this.load.image('world-earth', '/tiles/earth.png');
-    this.load.image('world-road', '/tiles/road00.png');
-    this.load.image('world-water', '/tiles/water00.png');
-    this.load.image('world-tree', '/tiles/tree.png');
-    this.load.image('world-wall', '/tiles/wall.png');
-    this.load.image('world-spike', '/tiles/spike.png');
-    this.load.image('world-hut', '/tiles/hut.png');
-    this.load.image('world-stairs', '/tiles/stairs1.png');
-    this.load.image('world-stairs-2', '/tiles/stairs2.png');
-    this.load.image('world-chest', '/objects/chest.png');
-    this.load.image('world-door-iron', '/objects/door_iron.png');
-    this.load.image('world-lantern', '/objects/lantern.png');
-    this.load.image('world-tent', '/objects/tent.png');
-    this.load.image('world-slime-1', '/monsters/greenslime_down_1.png');
-    this.load.image('world-slime-2', '/monsters/greenslime_down_2.png');
+    this.load.image('world-player-down-1', publicPath('/player/boy_down_1.png'));
+    this.load.image('world-player-down-2', publicPath('/player/boy_down_2.png'));
+    this.load.image('world-player-up-1', publicPath('/player/boy_up_1.png'));
+    this.load.image('world-player-up-2', publicPath('/player/boy_up_2.png'));
+    this.load.image('world-player-left-1', publicPath('/player/boy_left_1.png'));
+    this.load.image('world-player-left-2', publicPath('/player/boy_left_2.png'));
+    this.load.image('world-player-right-1', publicPath('/player/boy_right_1.png'));
+    this.load.image('world-player-right-2', publicPath('/player/boy_right_2.png'));
+    this.load.image('world-grass', publicPath('/tiles/grass00.png'));
+    this.load.image('world-grass-alt', publicPath('/tiles/grass01.png'));
+    this.load.image('world-earth', publicPath('/tiles/earth.png'));
+    this.load.image('world-road', publicPath('/tiles/road00.png'));
+    this.load.image('world-water', publicPath('/tiles/water00.png'));
+    this.load.image('world-tree', publicPath('/tiles/tree.png'));
+    this.load.image('world-wall', publicPath('/tiles/wall.png'));
+    this.load.image('world-spike', publicPath('/tiles/spike.png'));
+    this.load.image('world-hut', publicPath('/tiles/hut.png'));
+    this.load.image('world-stairs', publicPath('/tiles/stairs1.png'));
+    this.load.image('world-stairs-2', publicPath('/tiles/stairs2.png'));
+    this.load.image('world-chest', publicPath('/objects/chest.png'));
+    this.load.image('world-door-iron', publicPath('/objects/door_iron.png'));
+    this.load.image('world-lantern', publicPath('/objects/lantern.png'));
+    this.load.image('world-tent', publicPath('/objects/tent.png'));
+    this.load.image('world-slime-1', publicPath('/monsters/greenslime_down_1.png'));
+    this.load.image('world-slime-2', publicPath('/monsters/greenslime_down_2.png'));
   }
 
   create() {

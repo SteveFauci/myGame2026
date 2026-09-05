@@ -1,3 +1,5 @@
+import { publicPath } from './publicPath.js';
+
 export const ITEM_TYPES = Object.freeze({
   weapon: 'weapon',
   shield: 'shield',
@@ -129,7 +131,7 @@ export function getItemAssetPath(itemOrTextureKey) {
     : itemOrTextureKey?.textureKey;
   const assetName = ITEM_ASSET_NAMES[textureKey];
 
-  return assetName ? `/objects/${assetName}.png` : null;
+  return assetName ? publicPath(`/objects/${assetName}.png`) : null;
 }
 
 export function getItemDefinition(itemId) {

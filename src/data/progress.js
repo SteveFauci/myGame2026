@@ -141,23 +141,21 @@ export function saveProgress(progress) {
 }
 
 export function resetProgress() {
-  const fallback = getDefaultProgress();
+  const defaultProgress = getDefaultProgress();
 
-  if (typeof window !== 'undefined' && window.localStorage) {
+  if (typeof window !== 'undefined') {
     try {
       const storage = window.localStorage;
       if (storage) {
         storage.removeItem(STORAGE_KEY);
-        LEGACY_STORAGE_KEYS.forEach((legacyStorage) => {
-          storage.removeItem(legacyStorage.key);
-        });
+        LEGACY_STORAGE_KEYS.forEach(({ key }) => storage.removeItem(key));
       }
     } catch {
-      // Resetting progress should fail gracefully if storage is blocked.
+      // Ignore storage cleanup failures; a fresh saved state is still returned.
     }
   }
 
-  return fallback;
+  return saveProgress(defaultProgress);
 }
 
 export function completeChapterProgress(chapterId, unlockedNodeIds = [], discoveredNodeIds = unlockedNodeIds) {

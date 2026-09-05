@@ -1,3 +1,5 @@
+import { publicPath } from '../data/publicPath.js';
+
 const AUDIO_SETTINGS_KEY = 'myGame2026.audio.v1';
 const DEFAULT_MASTER_VOLUME = 0.75;
 
@@ -34,7 +36,7 @@ let activeMusic = null;
 
 export function preloadAudio(loader) {
   Object.entries({ ...AUDIO_ASSETS.music, ...AUDIO_ASSETS.sfx }).forEach(([key, path]) => {
-    loader.audio(key, path);
+    loader.audio(key, publicPath(path));
   });
 }
 

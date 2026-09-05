@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ITEM_DEFINITIONS, getItemAssetPath, getItemDefinition } from '../data/items.js';
 import { loadPlayerState, savePlayerState } from '../data/playerState.js';
+import { publicPath } from '../data/publicPath.js';
 import { getShopDefinition } from '../data/shops.js';
 import AudioManager, { preloadAudio } from '../systems/AudioManager.js';
 import ShopInventory from '../systems/ShopInventory.js';
@@ -33,13 +34,13 @@ export default class ShopScene extends Phaser.Scene {
 
   preload() {
     preloadAudio(this.load);
-    this.loadImageOnce('shop-merchant-1', '/npc/merchant_down_1.png');
-    this.loadImageOnce('shop-merchant-2', '/npc/merchant_down_2.png');
-    this.loadImageOnce('shop-coin', '/objects/coin_bronze.png');
-    this.loadImageOnce('shop-floor', '/tiles/floor01.png');
-    this.loadImageOnce('shop-wall', '/tiles/wall.png');
-    this.loadImageOnce('shop-table-1', '/tiles/table01.png');
-    this.loadImageOnce('shop-table-2', '/tiles/table02.png');
+    this.loadImageOnce('shop-merchant-1', publicPath('/npc/merchant_down_1.png'));
+    this.loadImageOnce('shop-merchant-2', publicPath('/npc/merchant_down_2.png'));
+    this.loadImageOnce('shop-coin', publicPath('/objects/coin_bronze.png'));
+    this.loadImageOnce('shop-floor', publicPath('/tiles/floor01.png'));
+    this.loadImageOnce('shop-wall', publicPath('/tiles/wall.png'));
+    this.loadImageOnce('shop-table-1', publicPath('/tiles/table01.png'));
+    this.loadImageOnce('shop-table-2', publicPath('/tiles/table02.png'));
 
     Object.values(ITEM_DEFINITIONS).forEach((item) => {
       const assetPath = getItemAssetPath(item);
@@ -462,7 +463,7 @@ export default class ShopScene extends Phaser.Scene {
       return;
     }
 
-    this.scene.start('WorldMapScene', {
+    this.scene.start(this.returnSceneKey ?? 'WorldMapScene', {
       returnNodeId: this.returnNodeId,
       worldMessage: this.shopDefinition.farewell,
     });

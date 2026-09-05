@@ -9,21 +9,9 @@ const STORY_LINES = Object.freeze([
 ]);
 
 const CREDIT_LINES = Object.freeze([
-  'DEVELOPMENT TEAM',
-  'Zhang Chi (@QzlabQ)  Huang Haicheng (@CodeAstronauth)',
-  'Hu Yunfan (@Qwqwqwert)  Fu Qi (@SteveFauci)',
-  '',
-  'Lead Engine Architect & Project Manager',
-  'Zhang Chi (@QzlabQ)',
-  '',
-  'Core Gameplay Implementation',
-  'Huang Haicheng (@CodeAstronauth)',
-  '',
-  'Tools Developer & System Polish',
-  'Hu Yunfan (@Qwqwqwert)',
-  '',
-  'Level Design & Boss Mechanics',
+  'DEVELOPER',
   'Fu Qi (@SteveFauci)',
+  'ChatGPT 5.5',
   '',
   'ACKNOWLEDGEMENT',
   '',
@@ -32,12 +20,13 @@ const CREDIT_LINES = Object.freeze([
   '',
   'SPECIAL THANKS',
   '',
-  'Tester Name 1',
-  'Tester Name 2',
+  'Zhang Chi (@QzlabQ)',
+  'Huang Haicheng (@CodeAstronauth)',
+  'Hu Yunfan (@Qwqwqwert)',
   '',
   'Thank you for playing!',
   '',
-  'December 2025',
+  'September 2025',
   '',
   'Beihang University, School of Software',
 ]);
@@ -45,17 +34,22 @@ const CREDIT_LINES = Object.freeze([
 export default class CreditsScene extends Phaser.Scene {
   constructor() {
     super('CreditsScene');
-    this.returnSceneKey = 'TitleScene';
+    this.returnSceneKey = 'WorldMapScene';
     this.returnSceneData = {};
     this.returnMode = 'start';
+    this.returnNodeId = 'bossGate';
     this.phase = 'story';
     this.elapsed = 0;
   }
 
   init(data = {}) {
-    this.returnSceneKey = data.returnSceneKey ?? 'TitleScene';
+    this.returnSceneKey = data.returnSceneKey ?? 'WorldMapScene';
     this.returnSceneData = data.returnSceneData ?? {};
     this.returnMode = data.returnMode ?? 'start';
+    this.returnNodeId = data.returnNodeId ?? 'bossGate';
+    if (this.returnSceneKey === 'WorldMapScene' && !Object.keys(this.returnSceneData).length) {
+      this.returnSceneData = { returnNodeId: this.returnNodeId };
+    }
     this.phase = 'story';
     this.elapsed = 0;
   }
@@ -105,7 +99,8 @@ export default class CreditsScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5, 0);
 
-    this.exitHint = this.add.text(0, 0, 'F / Enter: return to Title Screen', {
+    const returnLabel = this.returnSceneKey === 'TitleScene' ? 'Title Screen' : 'World Map';
+    this.exitHint = this.add.text(0, 0, `F / Enter: return to ${returnLabel}`, {
       fontFamily: 'MaruMonica',
       fontSize: '24px',
       color: '#94a3b8',
@@ -197,6 +192,6 @@ export default class CreditsScene extends Phaser.Scene {
       return;
     }
 
-    this.scene.start(this.returnSceneKey ?? 'TitleScene', this.returnSceneData);
+    this.scene.start(this.returnSceneKey ?? 'WorldMapScene', this.returnSceneData);
   }
 }

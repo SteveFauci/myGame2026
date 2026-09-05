@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { loadProgress, resetProgress } from '../data/progress.js';
 import { resetPlayerState } from '../data/playerState.js';
+import { publicPath } from '../data/publicPath.js';
 import AudioManager, { preloadAudio } from '../systems/AudioManager.js';
 
 const TITLE_OPTIONS = Object.freeze([
@@ -26,8 +27,8 @@ export default class TitleScene extends Phaser.Scene {
 
   preload() {
     preloadAudio(this.load);
-    this.load.image('title-boy-1', '/player/boy_down_1.png');
-    this.load.image('title-boy-2', '/player/boy_down_2.png');
+    this.load.image('title-boy-1', publicPath('/player/boy_down_1.png'));
+    this.load.image('title-boy-2', publicPath('/player/boy_down_2.png'));
   }
 
   create() {
@@ -37,6 +38,15 @@ export default class TitleScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#000000');
 
     this.audio = new AudioManager(this);
+    this.ensureAudioPlayback = () => {
+      this.audio?.playMusic('music-overworld');
+    };
+    this.sound?.once('unlocked', this.ensureAudioPlayback);
+    this.input.once('pointerdown', this.ensureAudioPlayback);
+    this.input.keyboard.once('keydown', this.ensureAudioPlayback);
+    if (this.sound?.locked && typeof this.sound.unlock === 'function') {
+      this.sound.unlock();
+    }
     this.audio.playMusic('music-overworld');
 
     this.keys = this.input.keyboard.addKeys({
@@ -99,7 +109,7 @@ export default class TitleScene extends Phaser.Scene {
     this.titleShadow = this.add.text(0, 0, 'Blue Boy Adventure', {
       ...titleStyle,
       color: '#000000',
-    }).setOrigin(0.5).setAlpha(0.9);
+    }).setOrigin(0.5).setAlpha(0.85);
 
     this.titleText = this.add.text(0, 0, 'Blue Boy Adventure', titleStyle)
       .setOrigin(0.5);
@@ -123,14 +133,13 @@ export default class TitleScene extends Phaser.Scene {
 
     this.menuEntries = availableEntries.map((option) => ({
       ...option,
-      text: this.add.text(0, 0, option.label, menuStyle)
-        .setOrigin(0.5),
+      text: this.add.text(0, 0, option.label, menuStyle).setOrigin(0.5),
     }));
 
     this.menuCursorText = this.add.text(0, 0, '>', {
       fontFamily: 'MaruMonica',
       fontSize: '40px',
-      color: '#f8fafc',
+      color: '#fde68a',
       stroke: '#000000',
       strokeThickness: 6,
     }).setOrigin(0.5);
@@ -163,9 +172,9 @@ export default class TitleScene extends Phaser.Scene {
 
   layoutUi() {
     const centerX = this.scale.width / 2;
-    const titleY = Math.round(this.scale.height * 0.22);
-    const heroY = Math.round(this.scale.height * 0.43);
-    const menuStartY = Math.round(this.scale.height * 0.60);
+    const titleY = Math.round(this.scale.height * 0.18);
+    const heroY = Math.round(this.scale.height * 0.42);
+    const menuStartY = Math.round(this.scale.height * 0.61);
     const menuGap = 52;
 
     this.titleShadow?.setPosition(centerX + 6, titleY + 6);
@@ -198,8 +207,8 @@ export default class TitleScene extends Phaser.Scene {
     const selectedBounds = this.menuEntries[this.menuCursor].text.getBounds();
     this.menuCursorText?.setVisible(true);
     this.menuCursorText?.setPosition(
-      Math.floor(selectedBounds.x - 38),
-      Math.floor(selectedBounds.y + selectedBounds.height / 2 + 2),
+      Math.floor(selectedBounds.x - 44),
+      Math.floor(selectedBounds.y + selectedBounds.height / 2 + 3),
     );
   }
 
@@ -274,7 +283,9 @@ export default class TitleScene extends Phaser.Scene {
     this.scene.launch('CreditsScene', {
       returnSceneKey: 'TitleScene',
       returnMode: 'resume',
-      returnSceneData: {},
+      returnSceneData: {
+        bannerText: this.progress?.bossTreasureCollected ? 'The Blue Heart has been claimed.' : '',
+      },
     });
   }
 
@@ -312,6 +323,7 @@ export default class TitleScene extends Phaser.Scene {
   handleShutdown() {
     this.scale.off('resize', this.layoutUi, this);
 
+    this.sound?.off('unlocked', this.ensureAudioPlayback);
     if (this.statusTimer) {
       this.statusTimer.remove(false);
       this.statusTimer = null;
