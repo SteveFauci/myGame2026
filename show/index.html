@@ -435,7 +435,7 @@
         <div class="grid-list">
           <div class="feature">
             <strong>JavaScript + Phaser</strong>
-            <span>Phaser 负责 2D 场景、精灵、碰撞、输入和物理，适合像素风网页游戏。</span>
+            <span>JavaScript 负责规则、状态和数据流，Phaser 负责 2D 场景、精灵、碰撞、输入和物理；我把核心玩法建立在这套框架上，而不是从零写底层图形接口。</span>
           </div>
           <div class="feature">
             <strong>Vite</strong>
@@ -504,49 +504,79 @@
       </article>
 
       <article class="card section full">
-        <h3>关键技术细节</h3>
+        <h3>引擎实现</h3>
+        <p>
+          这一版可以理解成我在 Phaser 上面再做了一层轻量运行框架：输入先变成状态，逻辑在
+          `update()` 里统一结算，场景、资源、音频和存档都分开管理。这样答辩时如果老师问“你这个引擎是怎么工作的”，你就可以从下面这几块讲。
+        </p>
         <div class="timeline">
           <div class="timeline-item">
-            <strong>场景生命周期</strong>
+            <strong>主循环</strong>
             <span>
-              每个玩法模块都用 Phaser Scene 拆开。标题页负责入口，WorldMapScene 负责选关，
-              GameScene 负责主玩法，ShopScene 负责买卖，CreditsScene 负责结算和回放。
-              场景之间通过 `scene.start / pause / resume / launch` 传递状态。
+              游戏每帧都会进入 `update(time, delta)`。我不是直接在按键事件里改游戏结果，而是先把输入记录下来，再在每帧里统一消费，这样逻辑不会散到各处。
             </span>
           </div>
           <div class="timeline-item">
-            <strong>地图读取</strong>
+            <strong>场景系统</strong>
             <span>
-              关卡地图从 txt 里读取，前半段是 tile 矩阵，`#Entity` 后面是实体列表。
-              这样地图数据和游戏逻辑分离，编辑器导出的文本可以直接被主游戏加载。
+              标题页、世界地图、主关卡、商店和结算页都拆成独立 Scene。
+              场景切换时只传必要的数据，比如章节编号、返回节点、出生点和存档状态。
             </span>
           </div>
           <div class="timeline-item">
-            <strong>碰撞和交互</strong>
+            <strong>输入层</strong>
             <span>
-              地图 tile、门、岩石、掉落物、NPC 都有各自的碰撞/交互属性。
-              角色移动时会先做边界和碰撞检测，再决定是否能推箱、拾取、对话或开门。
+              键盘事件先变成 `pendingAttack / pendingPause / pendingInteract` 这类标志位，再在 `update()` 里统一处理。
+              这样暂停、对话、菜单和战斗不会抢同一个按键。
             </span>
           </div>
           <div class="timeline-item">
-            <strong>战斗判定</strong>
+            <strong>资源加载层</strong>
             <span>
-              近战攻击不是“按键立刻结算”，而是有前摇、命中帧和收招。
-              格挡会检查敌人的攻击方向和时间窗，完美格挡会触发反击收益，怪物也会进入失衡状态。
+              图片、音效和地图文本都在 `preload()` 里统一加载，并且通过 `publicPath()` 适配本地和 GitHub Pages。
+              场景切换时资源 key 可以直接复用，不需要重复读图。
             </span>
           </div>
           <div class="timeline-item">
-            <strong>怪物 AI</strong>
+            <strong>渲染层</strong>
             <span>
-              普通怪物先判断距离，再切换追踪或攻击；追踪时使用网格 A* 寻路。
-              Boss 则额外维护切镜头、战前宣言、战斗阶段、血条显示和胜利掉落。
+              我打开了 `pixelArt` 和 `roundPixels`，关闭抗锯齿，让像素素材保持清晰。
+              HUD 固定在屏幕上，相机则跟着玩家走，所以世界和界面是分层渲染的。
             </span>
           </div>
           <div class="timeline-item">
-            <strong>存档与扩展</strong>
+            <strong>碰撞与物理</strong>
             <span>
-              进度、背包、装备和音量都保存在本地存储里。
-              世界地图节点、章节配置、商店库存也都集中在数据文件，后续加关卡时只要补配置即可。
+              角色、怪物、门、岩石、掉落物都用独立碰撞盒处理。
+              tile、实体和交互点是分开的，判断依据是矩形碰撞，不是“看起来碰上了就算”。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>状态机</strong>
+            <span>
+              角色有移动、攻击、格挡、受击、击退、死亡和睡觉等状态，Boss 也有待机、cutscene、战斗和掉宝状态。
+              这些状态互相排斥，保证同一时刻只有一种主要行为。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>AI 和寻路</strong>
+            <span>
+              普通怪物会先判断距离，再决定追击还是攻击。
+              追击时用网格 A*，并限制搜索范围，避免大地图里寻路过度耗时。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>存档系统</strong>
+            <span>
+              进度和角色状态都保存到本地存储里，背包、装备、章节解锁、Boss 是否击败都能恢复。
+              这样刷新页面或者重新进入关卡时，游戏状态还能接上。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>音频和光照</strong>
+            <span>
+              BGM 和音效由统一管理器控制，音量也能单独保存。
+              光照层负责昼夜和永夜效果，把表现层和玩法层拆开后，后续改风格会更方便。
             </span>
           </div>
         </div>
@@ -590,60 +620,6 @@
           <div class="feature">
             <strong><code>util/level-editor</code> / <code>util/world-map-editor</code></strong>
             <span>关卡编辑器和世界地图编辑器都是独立网页工具，导出结果可以被主游戏直接读取。</span>
-          </div>
-        </div>
-      </article>
-
-      <article class="card section full">
-        <h3>老师可能追问什么</h3>
-        <div class="timeline">
-          <div class="timeline-item">
-            <strong>为什么不用后端？</strong>
-            <span>
-              这是单机课程作业，核心目标是完整玩法和快速展示，所以把存档放在本地就足够。
-              这样部署更简单，点 GitHub Pages 链接即可玩，不需要额外服务器。
-            </span>
-          </div>
-          <div class="timeline-item">
-            <strong>为什么不用 Java 继续写？</strong>
-            <span>
-              这一版目标是网页即玩和易展示。Phaser 对 2D 精灵、碰撞和场景切换支持很好，
-              用浏览器技术也更方便做编辑器和在线发布。
-            </span>
-          </div>
-          <div class="timeline-item">
-            <strong>怎么保证 Boss 关可重复挑战？</strong>
-            <span>
-              Boss 是否击败、宝物是否已获得都分成独立进度字段。
-              重新进入关卡时会根据进度重建 Boss、血条和掉落，而不是依赖临时运行状态。
-            </span>
-          </div>
-          <div class="timeline-item">
-            <strong>地图和编辑器怎么对上？</strong>
-            <span>
-              编辑器保存的是统一格式：tile + entity + 节点配置。
-              游戏端只读取同一套数据结构，不会出现“编辑器能看，游戏里不认”的情况。
-            </span>
-          </div>
-          <div class="timeline-item">
-            <strong>为什么同名装备不会串？</strong>
-            <span>
-              背包里用的是 slotId，而不是只看 itemId。
-              所以两个相同道具也能分别装备、分别出售，不会出现“装备一个，全体都装备”的问题。
-            </span>
-          </div>
-          <div class="timeline-item">
-            <strong>如何做调试模式？</strong>
-            <span>
-              在 `GameScene` 里单独维护 developerMode 标志位，把 no clip、invincible、恢复进度等功能放进暂停菜单，
-              这样不影响正常流程，也方便展示调试能力。
-            </span>
-          </div>
-          <div class="timeline-item">
-            <strong>怎么部署到网页？</strong>
-            <span>
-              `vite.config.js` 里配置了 GitHub Pages 的 base 路径，推到 `main` 后由 GitHub Actions 自动构建并发布 `dist/`。
-            </span>
           </div>
         </div>
       </article>
