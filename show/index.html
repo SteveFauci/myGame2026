@@ -647,6 +647,58 @@
           </div>
         </div>
       </article>
+
+      <article class="card section full">
+        <h3>引擎与性能</h3>
+        <p>
+          这个项目不是直接依赖一个现成的游戏编辑器，而是自己把“输入监听 -> 状态更新 -> 场景刷新”
+          这一套流程串起来，做成了一个轻量的 2D 游戏运行框架。答辩时可以说这是一个“小型手搓引擎”的思路。
+        </p>
+        <div class="timeline">
+          <div class="timeline-item">
+            <strong>输入监听</strong>
+            <span>
+              角色移动、攻击、交互、确认、暂停都由键盘事件触发，再转换成当前场景里的状态标志，
+              最后统一在每帧更新时处理，避免一个按键直接把逻辑散落到各处。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>渲染策略</strong>
+            <span>
+              使用 Phaser 的场景和精灵管理方式，配合像素模式、关闭抗锯齿、整数像素对齐，
+              让像素风素材保持清晰，同时减少不必要的画面平滑开销。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>资源复用</strong>
+            <span>
+              素材在 preload 阶段统一加载，场景切换后复用同一套资源 key。
+              这样避免重复读图，也减少了运行时重新创建素材的成本。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>局部更新</strong>
+            <span>
+              HUD、背包、世界地图、商店、Boss 血条都按需刷新，不会整张地图重新渲染。
+              主循环里只更新当前激活场景所需的状态，结构更轻。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>网格化寻路</strong>
+            <span>
+              怪物 AI 用的是基于格子的 A*，并且设置了搜索范围上限。
+              这样既能保证追踪效果，又不会让寻路在大地图上无限耗时。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>数据驱动降低耦合</strong>
+            <span>
+              地图、关卡、商店、世界节点都走配置，不把大量逻辑写死在主循环里。
+              这让后续增加内容时，不需要反复重构核心代码。
+            </span>
+          </div>
+        </div>
+      </article>
     </section>
 
     <p class="footer-note">
