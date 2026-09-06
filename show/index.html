@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blue Boy Adventure - 技术展示</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b14;
+      --bg-soft: #0e1626;
+      --panel: #111b2d;
+      --panel-2: #0f1724;
+      --text: #eef2ff;
+      --muted: #9fb0d1;
+      --accent: #7dd3fc;
+      --accent-2: #fbbf24;
+      --line: rgba(148, 163, 184, 0.22);
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.4);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top, rgba(125, 211, 252, 0.12), transparent 32%),
+        radial-gradient(circle at 80% 10%, rgba(251, 191, 36, 0.12), transparent 24%),
+        linear-gradient(180deg, #05070d 0%, var(--bg) 45%, #060913 100%);
+      color: var(--text);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    body {
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 32px 24px 42px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(17, 27, 45, 0.96), rgba(10, 16, 30, 0.96));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero-copy {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 380px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(125, 211, 252, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(125, 211, 252, 0.24);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(38px, 5vw, 66px);
+      line-height: 0.98;
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle {
+      max-width: 62ch;
+      color: var(--muted);
+      font-size: 17px;
+      margin: 0 0 16px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .meta {
+      padding: 14px 14px 13px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 14px;
+    }
+
+    .meta strong {
+      display: block;
+      color: var(--accent-2);
+      font-size: 13px;
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .meta span {
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .hero-bullets {
+      display: grid;
+      gap: 10px;
+      margin: 20px 0 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+    }
+
+    .hero-bullets li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .hero-bullets li::before {
+      content: "•";
+      color: var(--accent);
+      font-size: 18px;
+      line-height: 1.2;
+      margin-top: -1px;
+    }
+
+    .video-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 380px;
+    }
+
+    .video-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 280px;
+      background:
+        linear-gradient(135deg, rgba(125, 211, 252, 0.08), rgba(251, 191, 36, 0.08)),
+        #05070d;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .video-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      text-align: center;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(7, 11, 20, 0.08), rgba(7, 11, 20, 0.34));
+    }
+
+    .video-overlay.hidden {
+      display: none;
+    }
+
+    .video-overlay h2 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .video-overlay p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 36ch;
+    }
+
+    .video-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-top: 1px solid var(--line);
+    }
+
+    .file-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(125, 211, 252, 0.24);
+      background: rgba(125, 211, 252, 0.08);
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .file-label input {
+      display: none;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .sections {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+      margin-top: 22px;
+    }
+
+    .section {
+      padding: 22px 24px 24px;
+    }
+
+    .section h3 {
+      margin: 0 0 14px;
+      font-size: 25px;
+      line-height: 1.1;
+    }
+
+    .section p {
+      margin: 0 0 12px;
+      color: var(--muted);
+    }
+
+    .grid-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .feature {
+      padding: 14px 15px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .feature strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #ffffff;
+      font-size: 16px;
+    }
+
+    .feature span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: #dbeafe;
+      font-size: 13px;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 132px 1fr;
+      gap: 14px;
+      padding: 14px 15px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .timeline-item strong {
+      color: var(--accent-2);
+      font-size: 15px;
+    }
+
+    .timeline-item span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: #7c8aa8;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .sections {
+        grid-template-columns: 1fr;
+      }
+
+      .meta-grid,
+      .timeline-item {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-copy,
+      .video-card {
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <article class="card hero-copy">
+        <div>
+          <div class="eyebrow">Program Design Practice · Web Game Demo</div>
+          <h1>Blue Boy Adventure</h1>
+          <p class="subtitle">
+            这是一个浏览器端像素风 2D 动作冒险游戏，核心目标不是单纯“能通关”，
+            而是做成一个可以探索、可以选关、可以编辑、可以持续扩展的完整小游戏。
+          </p>
+
+          <ul class="hero-bullets">
+            <li>浏览器点击即玩，不需要安装客户端。</li>
+            <li>主线关卡、世界地图、商店、Boss、结算页全部分场景组织。</li>
+            <li>地图和节点尽量数据驱动，方便以后继续加关卡或做社区分享。</li>
+          </ul>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta">
+            <strong>项目类型</strong>
+            <span>课程作业 / Web 游戏</span>
+          </div>
+          <div class="meta">
+            <strong>技术路线</strong>
+            <span>Phaser + Vite + JavaScript</span>
+          </div>
+          <div class="meta">
+            <strong>展示重点</strong>
+            <span>玩法 + 技术实现 + 可扩展性</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card video-card">
+        <div class="video-wrap">
+          <video id="demoVideo" controls preload="metadata" playsinline></video>
+          <div id="videoOverlay" class="video-overlay">
+            <h2>4 分钟通关视频</h2>
+            <p>把你已有的视频拖进来，或者点下面按钮选择文件即可。</p>
+          </div>
+        </div>
+        <div class="video-controls">
+          <label class="file-label">
+            选择视频
+            <input id="videoInput" type="file" accept="video/*" />
+          </label>
+          <div class="hint">建议把视频放成 16:9，全屏演示更稳。</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="sections">
+      <article class="card section">
+        <h3>需求分析</h3>
+        <p>
+          这个项目最初不是只做“打通一关就结束”的演示，而是希望它像一个完整的小型游戏：
+          有起点、有探索、有选关、有商店、有 Boss、有结局，也保留后续扩展空间。
+        </p>
+        <div class="grid-list">
+          <div class="feature">
+            <strong>不只是通关</strong>
+            <span>玩家可以在世界地图上自由移动，选择不同节点进入关卡。</span>
+          </div>
+          <div class="feature">
+            <strong>支持探索和回访</strong>
+            <span>章节解锁、宝物收集、商店返回、关卡重进，都能靠存档状态维持。</span>
+          </div>
+          <div class="feature">
+            <strong>配套编辑器</strong>
+            <span>关卡编辑器和世界地图编辑器是独立网页工具，便于自己继续扩展地图。</span>
+          </div>
+          <div class="feature">
+            <strong>未来社区化设想</strong>
+            <span>如果后面开放分享，还可以上传自制关卡、交换地图、交流玩法。</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card section">
+        <h3>技术选型</h3>
+        <div class="grid-list">
+          <div class="feature">
+            <strong>JavaScript + Phaser</strong>
+            <span>Phaser 负责 2D 场景、精灵、碰撞、输入和物理，适合像素风网页游戏。</span>
+          </div>
+          <div class="feature">
+            <strong>Vite</strong>
+            <span>开发启动快、热更新快，适合这种需要频繁调关卡和素材的课程项目。</span>
+          </div>
+          <div class="feature">
+            <strong>浏览器部署</strong>
+            <span>打包后可以直接放到 GitHub Pages，老师和同学点链接就能玩。</span>
+          </div>
+          <div class="feature">
+            <strong>本地存档</strong>
+            <span>用 localStorage 保存进度、背包、装备和音量，不依赖后端也能完整体验。</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card section full">
+        <h3>实现思路</h3>
+        <div class="timeline">
+          <div class="timeline-item">
+            <strong>1. 场景拆分</strong>
+            <span>标题页、世界地图、主关卡、商店、结算页各自独立，进入和返回都通过场景切换完成。</span>
+          </div>
+          <div class="timeline-item">
+            <strong>2. 数据驱动</strong>
+            <span>地图、节点、商店、章节、任务目标都放在数据文件里，代码只负责读取和执行规则。</span>
+          </div>
+          <div class="timeline-item">
+            <strong>3. 战斗系统</strong>
+            <span>角色支持近战、远程、格挡、完美格挡、升级、法力恢复，敌人支持追踪、前摇、击退和死亡动画。</span>
+          </div>
+          <div class="timeline-item">
+            <strong>4. 关卡逻辑</strong>
+            <span>章节完成后能解锁下一个节点；Boss 关有切镜头、战前宣言、战斗状态切换、战利品发放和 credits。</span>
+          </div>
+          <div class="timeline-item">
+            <strong>5. 编辑器工具</strong>
+            <span>关卡编辑器用于铺 tile 和摆实体；世界地图编辑器用于拖节点、连路径、导入导出 JSON。</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card section">
+        <h3>未来设想</h3>
+        <div class="grid-list">
+          <div class="feature">
+            <strong>更多关卡</strong>
+            <span>可以继续加入森林、洞穴、城镇、隐藏关等章节。</span>
+          </div>
+          <div class="feature">
+            <strong>关卡共享</strong>
+            <span>如果后面做社区，可以导出地图文件，互相分享和评价关卡。</span>
+          </div>
+          <div class="feature">
+            <strong>更完整的成长线</strong>
+            <span>继续补装备、技能、怪物 AI、支线任务和成就系统。</span>
+          </div>
+        </div>
+        <div class="tag-row" aria-label="future tags">
+          <span class="tag">Map Editor</span>
+          <span class="tag">World Map</span>
+          <span class="tag">Boss Fight</span>
+          <span class="tag">Save System</span>
+          <span class="tag">Community Sharing</span>
+        </div>
+      </article>
+
+      <article class="card section full">
+        <h3>关键技术细节</h3>
+        <div class="timeline">
+          <div class="timeline-item">
+            <strong>场景生命周期</strong>
+            <span>
+              每个玩法模块都用 Phaser Scene 拆开。标题页负责入口，WorldMapScene 负责选关，
+              GameScene 负责主玩法，ShopScene 负责买卖，CreditsScene 负责结算和回放。
+              场景之间通过 `scene.start / pause / resume / launch` 传递状态。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>地图读取</strong>
+            <span>
+              关卡地图从 txt 里读取，前半段是 tile 矩阵，`#Entity` 后面是实体列表。
+              这样地图数据和游戏逻辑分离，编辑器导出的文本可以直接被主游戏加载。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>碰撞和交互</strong>
+            <span>
+              地图 tile、门、岩石、掉落物、NPC 都有各自的碰撞/交互属性。
+              角色移动时会先做边界和碰撞检测，再决定是否能推箱、拾取、对话或开门。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>战斗判定</strong>
+            <span>
+              近战攻击不是“按键立刻结算”，而是有前摇、命中帧和收招。
+              格挡会检查敌人的攻击方向和时间窗，完美格挡会触发反击收益，怪物也会进入失衡状态。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>怪物 AI</strong>
+            <span>
+              普通怪物先判断距离，再切换追踪或攻击；追踪时使用网格 A* 寻路。
+              Boss 则额外维护切镜头、战前宣言、战斗阶段、血条显示和胜利掉落。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>存档与扩展</strong>
+            <span>
+              进度、背包、装备和音量都保存在本地存储里。
+              世界地图节点、章节配置、商店库存也都集中在数据文件，后续加关卡时只要补配置即可。
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card section full">
+        <h3>代码结构拆解</h3>
+        <p>
+          这个项目的代码不是“一个大文件写到底”，而是按照职责切开。答辩时如果老师问你
+          “你怎么保证后面还能继续扩展”，就可以直接从这些文件说起。
+        </p>
+        <div class="grid-list">
+          <div class="feature">
+            <strong><code>src/main.js</code></strong>
+            <span>创建 Phaser.Game，统一配置像素渲染、缩放策略、物理系统和场景顺序。</span>
+          </div>
+          <div class="feature">
+            <strong><code>TitleScene</code> / <code>WorldMapScene</code></strong>
+            <span>负责入口和选关。标题页只做菜单，世界地图只做节点与路径，不混合战斗逻辑。</span>
+          </div>
+          <div class="feature">
+            <strong><code>GameScene</code></strong>
+            <span>主玩法中心，包含地图加载、实体生成、输入处理、战斗循环、Boss 逻辑和关卡结算。</span>
+          </div>
+          <div class="feature">
+            <strong><code>LegacyMapParser.js</code></strong>
+            <span>把 txt 地图解析成 tile 矩阵和实体列表，使编辑器导出的文本可以直接进入游戏。</span>
+          </div>
+          <div class="feature">
+            <strong><code>progress.js</code> / <code>playerState.js</code></strong>
+            <span>前者管章节解锁和世界进度，后者管背包、装备、血量、法力和角色成长。</span>
+          </div>
+          <div class="feature">
+            <strong><code>Inventory.js</code></strong>
+            <span>背包按 slot 管理，装备不会因为同名而串位，卖东西和换装都依赖 slotId。</span>
+          </div>
+          <div class="feature">
+            <strong><code>AudioManager.js</code> / <code>Lighting.js</code></strong>
+            <span>统一管理 BGM、音效和音量；光照层负责昼夜、永夜和玩家周围的视野范围。</span>
+          </div>
+          <div class="feature">
+            <strong><code>util/level-editor</code> / <code>util/world-map-editor</code></strong>
+            <span>关卡编辑器和世界地图编辑器都是独立网页工具，导出结果可以被主游戏直接读取。</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card section full">
+        <h3>老师可能追问什么</h3>
+        <div class="timeline">
+          <div class="timeline-item">
+            <strong>为什么不用后端？</strong>
+            <span>
+              这是单机课程作业，核心目标是完整玩法和快速展示，所以把存档放在本地就足够。
+              这样部署更简单，点 GitHub Pages 链接即可玩，不需要额外服务器。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>为什么不用 Java 继续写？</strong>
+            <span>
+              这一版目标是网页即玩和易展示。Phaser 对 2D 精灵、碰撞和场景切换支持很好，
+              用浏览器技术也更方便做编辑器和在线发布。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>怎么保证 Boss 关可重复挑战？</strong>
+            <span>
+              Boss 是否击败、宝物是否已获得都分成独立进度字段。
+              重新进入关卡时会根据进度重建 Boss、血条和掉落，而不是依赖临时运行状态。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>地图和编辑器怎么对上？</strong>
+            <span>
+              编辑器保存的是统一格式：tile + entity + 节点配置。
+              游戏端只读取同一套数据结构，不会出现“编辑器能看，游戏里不认”的情况。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>为什么同名装备不会串？</strong>
+            <span>
+              背包里用的是 slotId，而不是只看 itemId。
+              所以两个相同道具也能分别装备、分别出售，不会出现“装备一个，全体都装备”的问题。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>如何做调试模式？</strong>
+            <span>
+              在 `GameScene` 里单独维护 developerMode 标志位，把 no clip、invincible、恢复进度等功能放进暂停菜单，
+              这样不影响正常流程，也方便展示调试能力。
+            </span>
+          </div>
+          <div class="timeline-item">
+            <strong>怎么部署到网页？</strong>
+            <span>
+              `vite.config.js` 里配置了 GitHub Pages 的 base 路径，推到 `main` 后由 GitHub Actions 自动构建并发布 `dist/`。
+            </span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <p class="footer-note">
+      提示：你可以先放 4 分钟通关视频，再切到这个页面讲“为什么这么做、怎么做的、还能怎么扩展”。
+    </p>
+  </main>
+
+  <script>
+    const videoInput = document.getElementById('videoInput');
+    const demoVideo = document.getElementById('demoVideo');
+    const overlay = document.getElementById('videoOverlay');
+
+    function showOverlay() {
+      overlay.classList.remove('hidden');
+    }
+
+    function hideOverlay() {
+      overlay.classList.add('hidden');
+    }
+
+    videoInput.addEventListener('change', () => {
+      const file = videoInput.files && videoInput.files[0];
+      if (!file) {
+        demoVideo.removeAttribute('src');
+        demoVideo.load();
+        showOverlay();
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      demoVideo.src = url;
+      demoVideo.load();
+      hideOverlay();
+    });
+
+    demoVideo.addEventListener('play', hideOverlay);
+    demoVideo.addEventListener('pause', () => {
+      if (!demoVideo.src) {
+        showOverlay();
+      }
+    });
+    demoVideo.addEventListener('emptied', showOverlay);
+  </script>
+</body>
+</html>
